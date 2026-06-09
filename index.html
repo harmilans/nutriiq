@@ -2312,7 +2312,7 @@ async function fetchFeed() {
     // Detect new rows for animation
     const newIds = new Set(rows.map(r => r.id));
 
-    const tableRows = rows.map(r => {
+    const tableRows = rows.map((r, idx) => {
       const isNew = !lastFeedIds.has(r.id) && feedInitialized;
       const scoreColor = getTierColor(r.nutri_iq_score);
       const tier = (r.tier_label || '').replace(/_/g, ' ');
@@ -2324,6 +2324,14 @@ async function fetchFeed() {
         <td class="feed-tier">${tier}</td>
         <td style="font-size:12px; color:var(--muted);">${r.protein_per_100kcal != null ? r.protein_per_100kcal.toFixed(1) + 'g/100kcal' : '—'}</td>
         <td style="font-size:12px; text-align:center;">${r.has_artificial_additives ? '⚠️' : '✅'}</td>
+        <td style="text-align:center; min-width:60px;">
+          ${r.image_url
+            ? `<img src="${r.image_url}" alt="label" onclick="openFeedCard(${idx})"
+                style="width:44px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer;display:block;margin:0 auto;border:1.5px solid var(--border);" title="View label photo">`
+            : `<canvas id="thumb-${idx}" width="54" height="96"
+                style="border-radius:6px; cursor:pointer; display:block; margin:0 auto;"
+                onclick="openFeedCard(${idx})" title="View report card"></canvas>`}
+        </td>
       </tr>`;
     }).join('');
 
@@ -2342,6 +2350,7 @@ async function fetchFeed() {
             <th>Tier</th>
             <th>Protein Eff.</th>
             <th>Additives</th>
+            <th>Card</th>
           </tr>
         </thead>
         <tbody>${tableRows}</tbody>
@@ -2354,10 +2363,79 @@ async function fetchFeed() {
     lastFeedIds = newIds;
     feedInitialized = true;
 
+    // Draw thumbnail cards after DOM update
+    requestAnimationFrame(() => {
+      rows.forEach((r, idx) => {
+        const c = document.getElementById(`thumb-${idx}`);
+        if (c) drawFeedThumb(c, r);
+      });
+    });
+
   } catch (err) {
     console.error('Feed error:', err);
     document.getElementById('feed-content').innerHTML = `<div class="feed-loading">Could not load feed. ${err.message}</div>`;
   }
+}
+
+function drawFeedThumb(canvas, r) {
+  const W = 54, H = 96;
+  const ctx = canvas.getContext('2d');
+  const score = r.nutri_iq_score ?? 0;
+
+  // Background
+  ctx.fillStyle = '#0d1b2a';
+  ctx.beginPath();
+  ctx.roundRect(0, 0, W, H, 6);
+  ctx.fill();
+
+  // Score arc
+  const cx = W / 2, cy = 40, radius = 18, lw = 4;
+  const startAngle = Math.PI * 0.75;
+  const endAngle = Math.PI * 0.75 + (Math.PI * 1.5 * score / 100);
+  ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = lw; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, radius, startAngle, endAngle);
+  const scoreColor = score >= 75 ? '#00B4C8' : score >= 50 ? '#f39c12' : '#e74c3c';
+  ctx.strokeStyle = scoreColor; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.stroke();
+
+  // Score number
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(score, cx, cy + 4);
+
+  // Product name (truncated)
+  const name = (r.product_name || 'Unknown').slice(0, 10);
+  ctx.font = '7px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fillText(name, cx, 66);
+
+  // City
+  ctx.font = '6px sans-serif'; ctx.fillStyle = 'rgba(0,180,200,0.9)';
+  ctx.fillText(r.city || '—', cx, 76);
+
+  // "tap to view" hint
+  ctx.font = '5px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.fillText('tap to view', cx, 89);
+}
+
+function openFeedCard(idx) {
+  const r = _lastFeedRows[idx];
+  if (!r) return;
+  // Build a minimal result object compatible with drawShareCard
+  const synth = {
+    product_name: r.product_name || 'Unknown product',
+    nutri_iq_score: r.nutri_iq_score ?? 0,
+    score_grade: r.nutri_iq_score >= 85 ? 'Excellent' : r.nutri_iq_score >= 70 ? 'Good' : r.nutri_iq_score >= 50 ? 'Decent' : r.nutri_iq_score >= 30 ? 'Poor' : 'Harmful',
+    score_color: r.nutri_iq_score >= 68 ? 'great' : r.nutri_iq_score >= 45 ? 'ok' : 'bad',
+    protein_per_100kcal: r.protein_per_100kcal ?? 0,
+    per_100g: { sugar_g: r.sugar_per_100g ?? 0, calories: r.calories_per_100g ?? 0, protein_g: 0, carbs_g: 0, fat_g: 0, saturated_fat_g: 0, fibre_g: r.fibre_per_100g ?? 0, sodium_mg: 0 },
+    has_artificial_additives: r.has_artificial_additives ?? false,
+    verdicts: { good: ['Live feed scan'], bad: [], neutral: [] },
+    body_impact: '',
+    phab_comparison: { this_protein_per_100kcal: r.protein_per_100kcal ?? 0, phab_protein_per_100kcal: 17.5, this_sugar_per_100g: r.sugar_per_100g ?? 0, phab_sugar_per_100g: 0, nutri_iq_gap: 82 - (r.nutri_iq_score ?? 0) }
+  };
+  const overlay = document.getElementById('share-modal-overlay');
+  overlay.classList.remove('hidden');
+  const canvas = document.getElementById('share-canvas');
+  drawShareCard(canvas, synth);
 }
 
 async function adminClearFeed() {
