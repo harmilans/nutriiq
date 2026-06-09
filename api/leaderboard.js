@@ -1,7 +1,7 @@
 // api/leaderboard.js
-// Returns rolling 7-day city leaderboard from Supabase
+// Returns rolling 7-day city leaderboard from Supabase — direct query, no RPC
 
-const CACHE_SECONDS = 60; // 1 minute
+const CACHE_SECONDS = 60;
 
 export default async function handler(req, res) {
   const mode = req.query?.mode || 'overall'; // overall | protein | sugar
@@ -15,21 +15,46 @@ export default async function handler(req, res) {
       process.env.SUPABASE_SERVICE_KEY
     );
 
-    const { data, error } = await supabase.rpc('get_leaderboard', {
-      p_mode: mode,
-      p_min_scans: 1
-    });
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    // Fetch all scans with a city in the last 7 days
+    const { data: scans, error } = await supabase
+      .from('scans')
+      .select('city, nutri_iq_score, protein_per_100kcal, sugar_per_100g')
+      .not('city', 'is', null)
+      .gte('created_at', since);
 
     if (error) throw error;
 
-    // Debug: also return raw scan count for diagnosis
-    const { count: totalScans } = await supabase
-      .from('scans')
-      .select('*', { count: 'exact', head: true })
-      .not('city', 'is', null)
-      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+    // Group by city in JS
+    const cityMap = {};
+    for (const row of scans || []) {
+      if (!row.city) continue;
+      if (!cityMap[row.city]) cityMap[row.city] = { city: row.city, scores: [], proteins: [], sugars: [] };
+      if (row.nutri_iq_score != null) cityMap[row.city].scores.push(row.nutri_iq_score);
+      if (row.protein_per_100kcal != null) cityMap[row.city].proteins.push(row.protein_per_100kcal);
+      if (row.sugar_per_100g != null) cityMap[row.city].sugars.push(row.sugar_per_100g);
+    }
 
-    return res.status(200).json({ ok: true, mode, data, _debug: { scans_with_city_last7d: totalScans, rpc_rows: data?.length ?? 0 } });
+    const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+
+    let data = Object.values(cityMap).map(c => {
+      let avg_score;
+      if (mode === 'protein') avg_score = Math.round(avg(c.proteins) * 10) / 10;
+      else if (mode === 'sugar') avg_score = Math.round((100 - avg(c.sugars)) * 10) / 10;
+      else avg_score = Math.round(avg(c.scores) * 10) / 10;
+
+      return {
+        city: c.city,
+        avg_score,
+        scan_count: c.scores.length || c.proteins.length || c.sugars.length,
+        trend_7d: 0
+      };
+    });
+
+    data = data.filter(d => d.scan_count >= 1).sort((a, b) => b.avg_score - a.avg_score).slice(0, 20);
+
+    return res.status(200).json({ ok: true, mode, data });
 
   } catch (err) {
     console.error('Leaderboard error:', err);
