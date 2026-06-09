@@ -1,14 +1,27 @@
-// api/admin-clear.js
-// Master user only: deletes all scans from the DB
-// Protected by ADMIN_SECRET env var
+// api/admin-clear.js — Master user only: deletes all scans from the DB
+// Protected by ADMIN_SECRET env var with timing-safe comparison
+
+import { setSecurityHeaders, safeCompare, isRateLimited, getIp } from './_security.js';
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', process.env.ALLOWED_ORIGIN || '*');
+  setSecurityHeaders(res);
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 
+  // Hard rate-limit the admin endpoint: 5 attempts per 15 minutes per IP
+  const ip = getIp(req);
+  if (isRateLimited(`admin:${ip}`, 5, 15 * 60 * 1000)) {
+    return res.status(429).json({ error: 'Too many attempts' });
+  }
+
   const { secret } = req.body || {};
-  if (!secret || secret !== process.env.ADMIN_SECRET) {
+
+  if (!secret || !process.env.ADMIN_SECRET) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  // Timing-safe comparison prevents brute-force timing attacks
+  if (!safeCompare(secret, process.env.ADMIN_SECRET)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -20,7 +33,6 @@ export default async function handler(req, res) {
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
-    // Delete all rows — neq filter is a workaround since Supabase requires a filter for delete
     const { error, count } = await supabase
       .from('scans')
       .delete({ count: 'exact' })
@@ -28,8 +40,9 @@ export default async function handler(req, res) {
 
     if (error) throw error;
 
+    console.log(`[admin-clear] ${count} scans deleted by ${ip} at ${new Date().toISOString()}`);
     return res.status(200).json({ ok: true, deleted: count });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: 'Internal error' });
   }
 }
