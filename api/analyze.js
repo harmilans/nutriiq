@@ -1,44 +1,37 @@
-// api/analyze.js
-// Vercel serverless function — proxies image to Anthropic Claude Vision
-// Never exposes API key to the browser
+// api/analyze.js — Claude Vision proxy with security hardening + photo storage
+
+import { setSecurityHeaders, validateImageInput, sanitizeText, isRateLimited, getIp, hashIp } from './_security.js';
 
 export default async function handler(req, res) {
-  // CORS headers — lock to your domain in production
-  res.setHeader('Access-Control-Allow-Origin', process.env.ALLOWED_ORIGIN || '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  setSecurityHeaders(res);
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { imageBase64, imageType, city, productName } = req.body;
-
-  if (!imageBase64 || !imageType) {
-    return res.status(400).json({ error: 'imageBase64 and imageType are required' });
+  // Rate limit: 20 requests per hour per IP (hard — no silent skip)
+  const ip = getIp(req);
+  if (isRateLimited(`analyze:${ip}`, 20, 60 * 60 * 1000)) {
+    return res.status(429).json({ error: 'Too many requests. Try again later.' });
   }
 
-  // Basic rate limit via Vercel KV (optional — falls back gracefully if not configured)
-  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
-  if (process.env.KV_REST_API_URL) {
-    try {
-      const { kv } = await import('@vercel/kv');
-      const key = `ratelimit:${ip}`;
-      const count = await kv.incr(key);
-      if (count === 1) await kv.expire(key, 3600); // 1 hour window
-      if (count > 20) {
-        return res.status(429).json({ error: 'Too many requests. Try again later.' });
-      }
-    } catch (_) { /* KV not configured, skip */ }
-  }
+  const { imageBase64, imageType, city, productName } = req.body || {};
 
-  const SYSTEM_PROMPT = `You are NutriIQ, a nutritional intelligence engine built by Phab (an Indian protein bar brand). 
+  // Validate image inputs
+  const imgErr = validateImageInput(imageBase64, imageType);
+  if (imgErr) return res.status(400).json({ error: imgErr });
+
+  // Sanitize text inputs — strip HTML/script characters, enforce max lengths
+  const safeCity = sanitizeText(city, 60);
+  const safeProductName = sanitizeText(productName, 120);
+
+  const SYSTEM_PROMPT = `You are NutriIQ, a nutritional intelligence engine built by Phab (an Indian protein bar brand).
 Analyse nutrition labels with scientific rigour and a dry, slightly dark sense of humour in your descriptions.
 Always return valid JSON only — no markdown, no backticks, no preamble.`;
 
   const USER_PROMPT = `Analyse this nutrition label image and return ONLY a valid JSON object.
 
 IMPORTANT: The label may be rotated, sideways, upside-down, or at an angle — rotate it mentally and read it anyway. Do not refuse due to orientation.
-${productName ? `The user has identified this product as: "${productName}". Use this as the product_name and as context when reading the label.` : ''}
+${safeProductName ? `The user has identified this product as: "${safeProductName}". Use this as the product_name and as context when reading the label.` : ''}
 If the label is partially visible, estimate missing values from what is visible.
 Only set "not_a_food_label": true if the image contains NO food packaging whatsoever.
 
@@ -94,10 +87,7 @@ Required shape:
         messages: [{
           role: 'user',
           content: [
-            {
-              type: 'image',
-              source: { type: 'base64', media_type: imageType, data: imageBase64 }
-            },
+            { type: 'image', source: { type: 'base64', media_type: imageType, data: imageBase64 } },
             { type: 'text', text: USER_PROMPT }
           ]
         }]
@@ -107,7 +97,7 @@ Required shape:
     if (!response.ok) {
       const err = await response.text();
       console.error('Anthropic error:', err);
-      return res.status(502).json({ error: 'AI service error', detail: err });
+      return res.status(502).json({ error: 'AI service error' });
     }
 
     const data = await response.json();
@@ -118,41 +108,39 @@ Required shape:
     try {
       result = JSON.parse(clean);
     } catch (_) {
-      console.error('JSON parse failed. Raw response:', text);
-      return res.status(422).json({ error: 'Could not parse nutrition data. The label may be too blurry or obscured — try a flatter, better-lit photo.' });
+      console.error('JSON parse failed. Raw:', text.slice(0, 200));
+      return res.status(422).json({ error: 'Could not parse nutrition data. Try a flatter, better-lit photo.' });
     }
 
-    // Persist scan to Supabase
-    let persistError = null;
+    // Persist to Supabase (including photo if storage is configured)
     if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY && !result.not_a_food_label) {
       try {
-        await persistScan(result, city, ip);
+        const imageUrl = await persistScan(result, safeCity, ip, imageBase64, imageType);
         result._saved = true;
+        if (imageUrl) result._image_url = imageUrl;
       } catch (err) {
         console.error('Persist error:', err);
-        persistError = err.message;
         result._saved = false;
-        result._save_error = persistError;
       }
-    } else if (!process.env.SUPABASE_SERVICE_KEY) {
+    } else {
       result._saved = false;
-      result._save_error = 'SUPABASE_SERVICE_KEY not set in Vercel env vars';
     }
 
     return res.status(200).json(result);
 
   } catch (err) {
     console.error('Handler error:', err);
-    return res.status(500).json({ error: 'Internal server error', message: err.message });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
 
-async function persistScan(result, city, ip) {
+async function persistScan(result, city, ip, imageBase64, imageType) {
   const { createClient } = await import('@supabase/supabase-js');
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
-  // Dedup: skip if same ip_hash scanned same product within last 5 minutes
   const ipHash = hashIp(ip);
+
+  // Dedup: skip if same ip_hash + product within last 5 minutes
   const { data: recent } = await supabase
     .from('scans')
     .select('id')
@@ -160,7 +148,26 @@ async function persistScan(result, city, ip) {
     .eq('product_name', result.product_name)
     .gte('created_at', new Date(Date.now() - 5 * 60 * 1000).toISOString())
     .limit(1);
-  if (recent && recent.length > 0) return; // duplicate, skip
+  if (recent && recent.length > 0) return null;
+
+  // Upload photo to Supabase Storage (if bucket 'scan-images' exists)
+  let imageUrl = null;
+  if (imageBase64 && process.env.SUPABASE_STORAGE_ENABLED === 'true') {
+    try {
+      const ext = imageType.split('/')[1] || 'jpg';
+      const filename = `${Date.now()}-${ipHash}.${ext}`;
+      const buffer = Buffer.from(imageBase64, 'base64');
+      const { data: upload, error: uploadErr } = await supabase.storage
+        .from('scan-images')
+        .upload(filename, buffer, { contentType: imageType, upsert: false });
+      if (!uploadErr && upload) {
+        const { data: { publicUrl } } = supabase.storage.from('scan-images').getPublicUrl(filename);
+        imageUrl = publicUrl;
+      }
+    } catch (e) {
+      console.warn('Image upload failed (non-fatal):', e.message);
+    }
+  }
 
   await supabase.from('scans').insert({
     city: city || null,
@@ -173,8 +180,11 @@ async function persistScan(result, city, ip) {
     fibre_per_100g: result.per_100g?.fibre_g,
     has_artificial_additives: result.has_artificial_additives,
     ingredients_count: result.ingredients_count,
-    ip_hash: hashIp(ip)
+    ip_hash: ipHash,
+    image_url: imageUrl
   });
+
+  return imageUrl;
 }
 
 function getTierLabel(score) {
@@ -187,14 +197,4 @@ function getTierLabel(score) {
   if (score < 78) return 'BODY_APPROVED';
   if (score < 88) return 'GUT_APPROVED';
   return 'PEAK_HUMAN_FUEL';
-}
-
-function hashIp(ip) {
-  // Simple non-reversible hash for privacy compliance
-  let hash = 0;
-  for (let i = 0; i < ip.length; i++) {
-    hash = ((hash << 5) - hash) + ip.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash).toString(16);
 }
