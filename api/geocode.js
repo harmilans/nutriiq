@@ -1,27 +1,2190 @@
-// api/geocode.js
-// Reverse geocode lat/lon via Nominatim — proxied server-side to avoid CORS/User-Agent issues
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NutriIQ by phab — What's Really In Your Food?</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', process.env.ALLOWED_ORIGIN || '*');
-  res.setHeader('Cache-Control', 's-maxage=300');
+  :root {
+    --bg:          #F0FAFB;
+    --surface:     #ffffff;
+    --surface2:    #E6F7F9;
+    --border:      #C8ECF0;
+    --text:        #0D1F22;
+    --muted:       #5A7A80;
+    --phab:        #00B4C8;
+    --phab-dark:   #009AAC;
+    --phab-light:  #E0F7FA;
+    --obsidian:    #00B4C8;
+    --graphite:    #0D1F22;
+    --brown:       #5C3317;
+    --brown-light: #F9EFE7;
+    --green:       #16a34a;
+    --green-light: #dcfce7;
+    --yellow:      #d97706;
+    --yellow-light:#fef3c7;
+    --red:         #dc2626;
+    --red-light:   #fee2e2;
+    --score-great: #22C55E;
+    --score-ok:    #F59E0B;
+    --score-bad:   #EF4444;
+    --radius:      16px;
+    --radius-sm:   10px;
+  }
 
-  const { lat, lon } = req.query;
-  if (!lat || !lon) return res.status(400).json({ error: 'lat and lon required' });
+  * { margin: 0; padding: 0; box-sizing: border-box; }
 
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* NAV */
+  nav {
+    background: #fff;
+    border-bottom: 1.5px solid var(--border);
+    padding: 0 1.5rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-logo {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+  .nav-logo span { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 6px; letter-spacing: 0; }
+  .nav-right {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .nav-tab {
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 0.35rem 0.85rem;
+    border-radius: 20px;
+    border: 1.5px solid transparent;
+    transition: all 0.2s;
+    background: none;
+  }
+  .nav-tab.active, .nav-tab:hover {
+    color: var(--phab);
+    background: var(--phab-light);
+    border-color: var(--phab);
+  }
+
+  /* PAGES */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* HERO */
+  .hero {
+    background: var(--bg);
+    border-bottom: 1.5px solid var(--border);
+    padding: 3.5rem 1.5rem 3rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before { display: none; }
+  .hero::after { display: none; }
+  .hero-inner { max-width: 600px; margin: 0 auto; position: relative; z-index: 1; }
+  .hero-eyebrow {
+    display: inline-block;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--phab);
+    background: var(--phab-light);
+    border: 1px solid rgba(255,91,31,0.2);
+    padding: 0.3rem 0.9rem;
+    border-radius: 20px;
+    margin-bottom: 1.25rem;
+  }
+  .hero h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(2rem, 6vw, 3.2rem);
+    font-weight: 700;
+    line-height: 1.05;
+    margin-bottom: 1rem;
+    letter-spacing: -1.5px;
+    color: var(--text);
+  }
+  .hero h1 em {
+    color: #00B4C8;
+    font-style: italic;
+  }
+  .hero-sub {
+    color: var(--muted);
+    font-size: 15px;
+    max-width: 440px;
+    margin: 0 auto 1.5rem;
+    font-weight: 400;
+    line-height: 1.7;
+  }
+  .hero-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-bottom: 2rem;
+  }
+  .hero-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 0.4rem 0.9rem;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  /* UPLOAD ZONE */
+  .upload-zone {
+    max-width: 520px;
+    margin: 0 auto 2rem;
+    border: 2px dashed var(--phab);
+    border-radius: var(--radius);
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s;
+    background: var(--bg);
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--phab-dark);
+    background: var(--phab-light);
+  }
+  .upload-zone input[type=file] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+  .btn-camera {
+    display: block;
+    width: 100%;
+    padding: 0.85rem;
+    background: var(--phab);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 1rem;
+    font-family: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 1.5rem;
+    transition: background 0.2s;
+  }
+  .btn-camera:hover { background: var(--phab-dark); }
+  .camera-wrap {
+    max-width: 520px;
+    margin: 0 auto 1.5rem;
+    padding: 0 1rem;
+  }
+  .camera-inner {
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #000;
+    aspect-ratio: 4/3;
+  }
+  #camera-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  #camera-canvas { display: none; }
+  .camera-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .camera-rect {
+    width: 75%;
+    height: 55%;
+    border: 3px solid rgba(255,255,255,0.8);
+    border-radius: 12px;
+    box-shadow: 0 0 0 2000px rgba(0,0,0,0.45);
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .camera-rect.readable {
+    border-color: #22c55e;
+    box-shadow: 0 0 0 2000px rgba(0,0,0,0.25), 0 0 20px rgba(34,197,94,0.6);
+  }
+  .camera-hint {
+    margin-top: 12px;
+    background: rgba(0,0,0,0.65);
+    color: #fff;
+    font-size: 12px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    backdrop-filter: blur(4px);
+    transition: background 0.3s;
+    letter-spacing: 0.3px;
+  }
+  .camera-hint.readable { background: rgba(34,197,94,0.85); }
+  .camera-controls {
+    position: absolute;
+    bottom: 14px;
+    left: 0; right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+  }
+  .btn-capture {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: #fff;
+    border: 4px solid rgba(255,255,255,0.5);
+    font-size: 28px;
+    cursor: pointer;
+    color: var(--phab);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  }
+  .btn-cam-close {
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .upload-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+  }
+  .upload-label {
+    font-weight: 600;
+    font-size: 17px;
+    margin-bottom: 0.4rem;
+    color: var(--text);
+  }
+  .upload-hint {
+    font-size: 13px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* CITY SELECT */
+  .city-select-wrap {
+    max-width: 520px;
+    margin: 0 auto 1rem;
+    display: flex;
+    gap: 0.5rem;
+  }
+  .city-select-wrap select, .city-select-wrap input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .city-select-wrap select:focus, .city-select-wrap input:focus {
+    border-color: var(--phab);
+  }
+
+  /* ANALYZE BTN */
+  .btn-analyze {
+    display: block;
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+    background: var(--phab);
+    color: #fff;
+    border: none;
+    padding: 0.9rem 2.5rem;
+    border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.2px;
+    box-shadow: 0 4px 16px rgba(255,91,31,0.3);
+  }
+  .btn-analyze:hover { background: var(--phab-dark); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,180,200,0.4); }
+  .btn-analyze:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; box-shadow: none; }
+
+  /* LOADING STATE */
+  .loading-state {
+    max-width: 520px;
+    margin: 2rem auto;
+    text-align: center;
+    display: none;
+  }
+  .loading-state.active { display: block; }
+  .loading-spinner {
+    width: 48px;
+    height: 48px;
+    border: 3px solid var(--border);
+    border-top-color: var(--phab);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+    margin: 0 auto 1rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-steps {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .loading-step {
+    padding: 0.2rem 0;
+    transition: color 0.3s;
+  }
+  .loading-step.done { color: var(--green); }
+  .loading-step.active { color: var(--phab); font-weight: 700; }
+  .loading-spinner { border-top-color: var(--phab); }
+
+  /* IMAGE PREVIEW */
+  .img-preview {
+    max-width: 520px;
+    margin: 0 auto 1.5rem;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1.5px solid var(--border);
+    display: none;
+  }
+  .img-preview.active { display: block; }
+  .img-preview img {
+    width: 100%;
+    max-height: 240px;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* RESULTS CARD */
+  .results-wrap {
+    max-width: 680px;
+    margin: 0 auto 3rem;
+    padding: 0 1rem;
+    display: none;
+  }
+  .results-wrap.active { display: block; }
+
+  /* SCORE RING */
+  .score-hero {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2rem 1.5rem;
+    text-align: center;
+    margin-bottom: 1rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .score-hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: var(--score-color, var(--phab));
+  }
+  .score-ring-wrap {
+    display: inline-block;
+    position: relative;
+    margin-bottom: 1rem;
+  }
+  .score-ring {
+    width: 140px;
+    height: 140px;
+    transform: rotate(-90deg);
+  }
+  .score-ring-bg {
+    fill: none;
+    stroke: var(--surface2);
+    stroke-width: 10;
+  }
+  .score-ring-fill {
+    fill: none;
+    stroke-width: 10;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s ease;
+  }
+  .score-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .score-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 2.4rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .score-denom {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+  .score-grade {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+  .score-tagline {
+    font-size: 14px;
+    color: var(--muted);
+    max-width: 320px;
+    margin: 0 auto;
+  }
+
+  /* NUTRIENT BARS */
+  .nutrient-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  @media (max-width: 480px) { .nutrient-grid { grid-template-columns: 1fr; } }
+
+  .nutrient-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.1rem;
+  }
+  .nutrient-label {
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 0.25rem;
+  }
+  .nutrient-val {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: 'Space Mono', monospace;
+    line-height: 1.1;
+    margin-bottom: 0.4rem;
+  }
+  .nutrient-bar-bg {
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .nutrient-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s ease;
+  }
+  .nutrient-note {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 0.3rem;
+  }
+
+  /* BREAKDOWN SECTION */
+  .breakdown-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .breakdown-title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .breakdown-title .icon { font-size: 1rem; }
+
+  /* VERDICT PILLS */
+  .verdict-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .verdict-pill {
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+  .pill-good { background: var(--green-light); color: var(--green); }
+  .pill-bad { background: var(--red-light); color: var(--red); }
+  .pill-ok { background: var(--yellow-light); color: var(--yellow); }
+
+  /* PHAB COMPARISON */
+  .phab-cta {
+    background: linear-gradient(135deg, #00B4C8 0%, #009AAC 100%);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    color: white;
+    margin-bottom: 1rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .phab-cta::after {
+    content: 'PHAB';
+    position: absolute;
+    right: -0.5rem;
+    top: 50%;
+    transform: translateY(-50%) rotate(90deg);
+    font-family: 'Space Mono', monospace;
+    font-size: 4rem;
+    font-weight: 700;
+    color: rgba(232,84,26,0.15);
+    letter-spacing: -0.05em;
+    pointer-events: none;
+  }
+  .phab-cta-head {
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+    color: rgba(255,255,255,0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+  }
+  .phab-cta h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    line-height: 1.2;
+  }
+  .phab-compare-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  .compare-col {
+    background: rgba(255,255,255,0.06);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem;
+    font-size: 12px;
+  }
+  .compare-col-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.3rem;
+  }
+  .compare-col-val { font-weight: 700; font-size: 1.1rem; }
+  .compare-vs {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
+    text-align: center;
+  }
+  .phab-score-boost {
+    display: inline-block;
+    background: var(--phab);
+    color: white;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  /* SHARE ROW */
+  .share-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+  .share-btn {
+    padding: 0.75rem;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    color: var(--text);
+  }
+  .share-btn:hover { border-color: var(--phab); color: var(--phab); background: var(--phab-light); }
+  .share-btn.primary {
+    background: var(--phab);
+    border-color: var(--phab);
+    color: #fff;
+    font-weight: 700;
+  }
+  .share-btn.primary:hover { background: var(--phab-dark); }
+
+  /* LEADERBOARD PAGE */
+  .leaderboard-wrap, .feed-wrap {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+
+  /* FEED */
+  .feed-stats {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .feed-stat {
+    flex: 1;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    text-align: center;
+  }
+  .feed-stat span {
+    display: block;
+    font-size: 1.6rem;
+    font-weight: 700;
+    font-family: 'Space Mono', monospace;
+    color: var(--phab);
+  }
+  .feed-stat small { font-size: 12px; color: var(--muted); }
+  .feed-loading { text-align: center; padding: 3rem; color: var(--muted); font-size: 14px; }
+  .feed-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    font-size: 13.5px;
+  }
+  .feed-table thead th {
+    background: var(--surface2);
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    border-bottom: 1.5px solid var(--border);
+  }
+  .feed-table tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .feed-table tbody tr:last-child { border-bottom: none; }
+  .feed-table tbody tr:hover { background: var(--surface2); }
+  .feed-table td { padding: 0.75rem 1rem; vertical-align: middle; }
+  .feed-score-pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+  }
+  .feed-score-pill.great { background: var(--green-light); color: var(--green); }
+  .feed-score-pill.ok    { background: var(--yellow-light); color: var(--yellow); }
+  .feed-score-pill.bad   { background: var(--red-light); color: var(--red); }
+  .feed-tier {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+  .feed-city-badge {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .feed-refresh {
+    margin-top: 1rem;
+    text-align: right;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .feed-refresh button {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--muted);
+  }
+  .feed-refresh button:hover { background: var(--surface2); }
+  .feed-new-row { animation: feedPop 0.4s ease; }
+  @keyframes feedPop {
+    from { background: var(--phab-light); }
+    to   { background: transparent; }
+  }
+  .lb-header {
+    margin-bottom: 2rem;
+  }
+  .lb-header h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.02em;
+  }
+  .lb-header p { color: var(--muted); font-size: 14px; }
+
+  .lb-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.25rem;
+  }
+  .lb-tab {
+    flex: 1;
+    padding: 0.5rem;
+    text-align: center;
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    color: var(--muted);
+    background: none;
+    border: none;
+  }
+  .lb-tab.active { background: var(--phab); color: #fff; }
+
+  .lb-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+  .lb-row {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    gap: 1rem;
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-row:hover { background: var(--surface2); }
+  .lb-rank {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    width: 32px;
+    text-align: center;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .lb-rank.gold { color: #c9a227; }
+  .lb-rank.silver { color: #8a9099; }
+  .lb-rank.bronze { color: #a0614a; }
+  .lb-city-info { flex: 1; }
+  .lb-city-name {
+    font-weight: 600;
+    font-size: 15px;
+  }
+  .lb-city-meta {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+  .lb-score-col { text-align: right; }
+  .lb-score-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.3rem;
+    font-weight: 700;
+  }
+  .lb-score-label {
+    font-size: 10px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+  .lb-bar-wrap {
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    margin-top: 0.4rem;
+    overflow: hidden;
+  }
+  .lb-bar { height: 100%; border-radius: 2px; background: var(--phab); }
+
+  /* TREND INDICATOR */
+  .trend-up { color: var(--green); font-size: 11px; font-family: 'Space Mono', monospace; }
+  .trend-down { color: var(--red); font-size: 11px; font-family: 'Space Mono', monospace; }
+
+  /* ABOUT PAGE */
+  .about-wrap {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+  .about-wrap h2 { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; letter-spacing: -0.02em; }
+  .about-wrap p { color: var(--muted); margin-bottom: 1rem; font-size: 15px; }
+
+  .index-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin: 1.5rem 0;
+  }
+  @media (max-width: 480px) { .index-grid { grid-template-columns: 1fr; } }
+
+  .index-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1.1rem;
+  }
+  .index-card h4 {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .index-card p { font-size: 12px; color: var(--muted); margin: 0; }
+  .index-weight {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--phab);
+    background: var(--phab-light);
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+  }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    padding: 2rem;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    border-top: 1px solid var(--border);
+    margin-top: 2rem;
+  }
+  .footer a { color: var(--phab); text-decoration: none; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--text);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 100px;
+    font-size: 13px;
+    font-family: 'Space Mono', monospace;
+    transition: transform 0.35s ease;
+    z-index: 999;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* SCAN COUNT BADGE */
+  .scan-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 0.3rem 0.75rem;
+    font-size: 11px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+  }
+  .scan-badge .dot {
+    width: 6px; height: 6px;
+    background: var(--phab);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .try-again-btn {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.65rem 1.5rem;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .try-again-btn:hover { border-color: var(--phab); color: var(--phab); background: var(--phab-light); }
+
+  /* SCORE COLORS */
+  .score-great { color: var(--score-great); }
+  .score-ok { color: var(--score-ok); }
+  .score-bad { color: var(--score-bad); }
+
+  /* SHARE CARD MODAL */
+  .share-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.78);
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    backdrop-filter: blur(4px);
+  }
+  .share-modal-overlay.hidden { display: none; }
+  .share-modal-box {
+    background: #181f27;
+    border-radius: 20px;
+    padding: 1.5rem;
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+  .share-modal-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    align-self: flex-start;
+  }
+  #share-canvas {
+    border-radius: 14px;
+    max-width: 100%;
+    height: auto;
+    display: block;
+    box-shadow: 0 8px 32px rgba(0,180,200,0.18);
+  }
+  .share-modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    width: 100%;
+  }
+  .share-modal-actions button {
+    flex: 1;
+    padding: 0.75rem;
+    border-radius: 10px;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .share-modal-actions button:hover { opacity: 0.85; }
+  .share-dl-btn {
+    background: #00B4C8;
+    color: #fff;
+  }
+  .share-close-btn {
+    background: #2a3240;
+    color: rgba(255,255,255,0.8);
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">phab <span>NutriIQ</span></div>
+  <div class="nav-right">
+    <button class="nav-tab active" onclick="showPage('scan')">📸 Scan</button>
+    <button class="nav-tab" onclick="showPage('feed')">📡 Live Feed</button>
+    <button class="nav-tab" onclick="showPage('leaderboard')">🏆 Cities</button>
+    <button class="nav-tab" onclick="showPage('about')">📐 Index</button>
+  </div>
+</nav>
+
+<!-- SCAN PAGE -->
+<div class="page active" id="page-scan">
+  <div class="hero">
+    <div class="hero-inner">
+      <div class="hero-eyebrow">Powered by phab × AI</div>
+      <h1>What's your snack <em>really</em> doing to you?</h1>
+      <p class="hero-sub">Scan any label. Get your NutriIQ score in 10 seconds.</p>
+      <div class="hero-pills">
+        <span class="hero-pill">💪 Protein Quality</span>
+        <span class="hero-pill">🩸 Sugar Risk</span>
+        <span class="hero-pill">🌿 Ingredient Cleanliness</span>
+      </div>
+      <div class="scan-badge">
+        <span class="dot"></span>
+        <span id="scan-count">Be the first to scan today</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width:520px; margin:0 auto 1rem; padding:0 1rem;">
+    <div id="city-auto-badge" style="display:none; align-items:center; gap:10px; background:var(--surface); border:1.5px solid var(--phab); border-radius:10px; padding:10px 14px;">
+      <span style="font-size:18px;">📍</span>
+      <div style="flex:1;">
+        <div style="font-size:13px; color:var(--muted);">Your city (auto-detected)</div>
+        <div id="city-detected-name" style="font-weight:700; color:var(--text); font-size:15px;"></div>
+      </div>
+      <button onclick="showCityInput()" style="font-size:12px; color:var(--phab); background:none; border:none; cursor:pointer; text-decoration:underline;">Change</button>
+    </div>
+    <div id="city-detecting-badge" style="display:none; align-items:center; gap:10px; background:var(--surface); border:1.5px solid var(--border); border-radius:10px; padding:10px 14px; color:var(--muted); font-size:13px;">
+      <span>📡 Detecting your city…</span>
+    </div>
+    <div id="city-manual-wrap" style="display:none;">
+      <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--text);">Your city <span style="font-weight:400; color:var(--muted);">(for the leaderboard)</span></label>
+      <input type="text" id="city-manual-input" placeholder="e.g. Mumbai, Dubai, London…"
+        style="width:100%; box-sizing:border-box; padding:10px 14px; border:1.5px solid var(--phab); border-radius:10px; font-size:14px; font-family:inherit; background:var(--surface); color:var(--text); outline:none;">
+    </div>
+    <!-- Hidden field stores the final city value used at scan time -->
+    <input type="hidden" id="city-value" value="">
+  </div>
+
+  <div style="max-width:520px; margin:0 auto; padding:0 1rem;">
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" id="file-input" accept="image/*">
+      <span class="upload-icon">🖼️</span>
+      <div class="upload-label">Upload an image</div>
+      <div class="upload-hint">Drag & drop or tap to choose from gallery</div>
+    </div>
+    <div style="text-align:center; margin:-1rem 0 1.5rem; color:var(--muted); font-size:13px;">— or —</div>
+    <button class="btn-camera" id="btn-open-camera" onclick="openCamera()">⊡ Scan with Camera</button>
+  </div>
+
+  <!-- Live camera viewfinder -->
+  <div class="camera-wrap" id="camera-wrap" style="display:none;">
+    <div class="camera-inner">
+      <video id="camera-video" autoplay playsinline muted></video>
+      <canvas id="camera-canvas"></canvas>
+      <div class="camera-overlay" id="camera-overlay">
+        <div class="camera-rect" id="camera-rect"></div>
+        <div class="camera-hint" id="camera-hint">Scanning label… align inside frame</div>
+      </div>
+      <div class="camera-controls">
+        <button class="btn-capture" id="btn-capture" onclick="capturePhoto()">⬤</button>
+        <button class="btn-cam-close" onclick="closeCamera()">✕ Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="img-preview" id="img-preview">
+    <img id="preview-img" src="" alt="Uploaded label">
+  </div>
+
+  <div id="product-name-wrap" style="display:none; max-width:520px; margin:0 auto 1rem; padding:0 1rem;">
+    <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--text);">
+      Product name <span style="font-weight:400; color:var(--muted);">(optional — helps if label is hard to read)</span>
+    </label>
+    <input type="text" id="product-name-input"
+      placeholder="e.g. Lay's Classic Salted, Britannia NutriChoice..."
+      style="width:100%; box-sizing:border-box; padding:12px 14px; border:1.5px solid var(--phab); border-radius:10px; font-size:14px; font-family:inherit; background:var(--surface); color:var(--text); outline:none;">
+  </div>
+
+  <div style="text-align:center; padding:0 1rem 1rem;">
+    <button class="btn-analyze" id="analyze-btn" onclick="analyzeImage()" disabled>
+      Analyse this food →
+    </button>
+  </div>
+
+  <div class="loading-state" id="loading-state">
+    <div class="loading-spinner"></div>
+    <div class="loading-steps">
+      <div class="loading-step" id="step-1">🔍 Reading nutrition label...</div>
+      <div class="loading-step" id="step-2">⚗️ Calculating NutriIQ score...</div>
+      <div class="loading-step" id="step-3">🧬 Analysing ingredient quality...</div>
+      <div class="loading-step" id="step-4">📊 Updating city leaderboard...</div>
+    </div>
+  </div>
+
+  <div class="results-wrap" id="results-wrap">
+    <!-- Filled by JS -->
+  </div>
+
+  <!-- DEBUG PANEL -->
+  <div id="debug-panel" style="display:none; max-width:520px; margin:1rem auto; padding:0 1rem;">
+    <details open>
+      <summary style="font-size:13px; font-weight:600; cursor:pointer; color:var(--muted); margin-bottom:0.5rem;">🔍 Debug: Raw API response</summary>
+      <pre style="background:#1a1a2e; color:#a0e0ff; font-size:11px; padding:1rem; border-radius:8px; overflow-x:auto; white-space:pre-wrap; word-break:break-all;"></pre>
+    </details>
+  </div>
+</div>
+
+<!-- LEADERBOARD PAGE -->
+<div class="page" id="page-leaderboard">
+  <div class="leaderboard-wrap">
+    <div class="lb-header">
+      <h2>🏆 City Leaderboard</h2>
+      <p>Which city eats the smartest? Updated in real-time as people scan.</p>
+    </div>
+
+    <div class="lb-tabs">
+      <button class="lb-tab active" onclick="switchLbTab('overall', this)">Overall NutriIQ</button>
+      <button class="lb-tab" onclick="switchLbTab('protein', this)">Protein Score</button>
+      <button class="lb-tab" onclick="switchLbTab('sugar', this)">Sugar Avoidance</button>
+    </div>
+
+    <div class="lb-card" id="lb-content">
+      <!-- Filled by JS -->
+    </div>
+
+    <div style="margin-top:1.5rem; padding:1rem 1.25rem; background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); font-size:13px; color:var(--muted);">
+      <strong style="color:var(--text);">How scoring works:</strong> Each city's score is the rolling 7-day average of all NutriIQ scans by users who selected that city. Min 10 scans to appear. Scores update every 15 minutes.
+    </div>
+  </div>
+</div>
+
+<!-- LIVE FEED PAGE -->
+<div class="page" id="page-feed">
+  <div class="feed-wrap">
+    <div class="lb-header">
+      <h2>📡 Live Scan Feed</h2>
+      <p>Real scans, real scores — updated every 30 seconds.</p>
+    </div>
+    <div class="feed-stats" id="feed-stats">
+      <div class="feed-stat"><span id="feed-total">—</span><small>total scans</small></div>
+      <div class="feed-stat"><span id="feed-avg">—</span><small>avg NutriIQ</small></div>
+      <div class="feed-stat"><span id="feed-today">—</span><small>today</small></div>
+    </div>
+    <div id="feed-content">
+      <div class="feed-loading">Loading feed…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ABOUT PAGE -->
+<div class="page" id="page-about">
+  <div class="about-wrap">
+    <h2>📐 The NutriIQ Index</h2>
+    <p>NutriIQ is a composite score (0–100) that measures how well a food serves your body, not just its macros. Designed by Phab's nutritionist team, it weights six dimensions.</p>
+
+    <div class="index-grid">
+      <div class="index-card">
+        <h4>⚡ Protein Efficiency <span class="index-weight">30%</span></h4>
+        <p>Protein grams per 100 kcal. The single most predictive metric for satiety and muscle protein synthesis.</p>
+      </div>
+      <div class="index-card">
+        <h4>🩸 Glycaemic Load <span class="index-weight">20%</span></h4>
+        <p>How sharply this food spikes blood sugar. Penalises high-GI carbs relative to fibre content.</p>
+      </div>
+      <div class="index-card">
+        <h4>🧂 Additive Penalty <span class="index-weight">20%</span></h4>
+        <p>Deductions for artificial sweeteners, preservatives, emulsifiers, and added sugar above 5g/100g.</p>
+      </div>
+      <div class="index-card">
+        <h4>🥑 Fat Quality <span class="index-weight">15%</span></h4>
+        <p>Ratio of unsaturated to saturated fat, with trans fat triggering a hard penalty.</p>
+      </div>
+      <div class="index-card">
+        <h4>🌾 Fibre Bonus <span class="index-weight">10%</span></h4>
+        <p>Rewards dietary fibre ≥5g per serving, critical for gut health and sustained energy.</p>
+      </div>
+      <div class="index-card">
+        <h4>📦 Ingredient Transparency <span class="index-weight">5%</span></h4>
+        <p>Shorter ingredient lists with recognisable names score higher. Rewards clean labels.</p>
+      </div>
+    </div>
+
+    <div style="background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); padding:1.25rem; margin-top:0.5rem;">
+      <h4 style="margin-bottom:0.75rem; font-size:14px;">Score Bands</h4>
+      <div style="display:flex; flex-direction:column; gap:0.5rem; font-size:13px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span>🟢 <strong>75–100</strong> — Excellent</span>
+          <span style="font-family:'Space Mono',monospace; color:var(--green); font-size:12px;">eat freely</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span>🟡 <strong>50–74</strong> — Decent</span>
+          <span style="font-family:'Space Mono',monospace; color:var(--yellow); font-size:12px;">mindful portion</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span>🔴 <strong>25–49</strong> — Poor</span>
+          <span style="font-family:'Space Mono',monospace; color:var(--red); font-size:12px;">occasional treat</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span>⚫ <strong>0–24</strong> — Harmful</span>
+          <span style="font-family:'Space Mono',monospace; color:var(--red); font-size:12px;">reconsider habit</span>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top:1.5rem; font-size:13px;">NutriIQ is not a medical device. Scores are educational and should not replace clinical dietary advice. Methodology developed in collaboration with registered nutritionists.</p>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- SHARE CARD MODAL -->
+<div class="share-modal-overlay hidden" id="share-modal-overlay" onclick="closeShareModal(event)">
+  <div class="share-modal-box" id="share-modal-box">
+    <div class="share-modal-title">Your NutriIQ Card</div>
+    <canvas id="share-canvas" width="540" height="960"></canvas>
+    <div class="share-modal-actions">
+      <button class="share-dl-btn" id="share-dl-btn" onclick="downloadShareCard()">⬇ Download PNG</button>
+      <button class="share-close-btn" onclick="closeShareModal()">✕ Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  Built by <a href="#">Phab</a> · nutritionist-grade food intelligence · <a href="#">phab.in</a>
+</div>
+
+<script>
+// ===================== STATE =====================
+let uploadedImageBase64 = null;
+let uploadedImageType = null;
+let currentResults = null;
+let lbMode = 'overall';
+
+
+// ===================== PAGE ROUTING =====================
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  event.target.classList.add('active');
+  if (page === 'leaderboard') renderLeaderboard();
+  if (page === 'feed') initFeed();
+}
+
+// ===================== CAMERA VIEWFINDER =====================
+let cameraStream = null;
+let cameraRafId = null;
+
+async function openCamera() {
+  const wrap = document.getElementById('camera-wrap');
+  const video = document.getElementById('camera-video');
   try {
-    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1`;
-    const r = await fetch(url, {
-      headers: {
-        'User-Agent': 'NutriIQ/1.0 (scan.phab.in)',
-        'Accept-Language': 'en'
-      }
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 960 } }
     });
-    if (!r.ok) return res.status(502).json({ error: 'Nominatim error' });
-    const data = await r.json();
-    const addr = data.address || {};
-    const city = addr.city || addr.town || addr.village || addr.county || addr.state_district || null;
-    return res.status(200).json({ ok: true, city, full: addr });
+    video.srcObject = cameraStream;
+    wrap.style.display = 'block';
+    wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    startReadabilityLoop();
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    alert('Camera access denied. Please allow camera permission and try again.');
   }
 }
+
+function closeCamera() {
+  if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+  if (cameraRafId) { cancelAnimationFrame(cameraRafId); cameraRafId = null; }
+  document.getElementById('camera-wrap').style.display = 'none';
+}
+
+function startReadabilityLoop() {
+  const video = document.getElementById('camera-video');
+  const canvas = document.getElementById('camera-canvas');
+  const rect = document.getElementById('camera-rect');
+  const hint = document.getElementById('camera-hint');
+  const ctx = canvas.getContext('2d');
+
+  function tick() {
+    if (!cameraStream) return;
+    if (video.readyState < 2) { cameraRafId = requestAnimationFrame(tick); return; }
+
+    const W = video.videoWidth, H = video.videoHeight;
+    canvas.width = W; canvas.height = H;
+    ctx.drawImage(video, 0, 0, W, H);
+
+    // Sample the centre 75%×55% region (matches the rect overlay)
+    const rx = Math.floor(W * 0.125), ry = Math.floor(H * 0.225);
+    const rw = Math.floor(W * 0.75),  rh = Math.floor(H * 0.55);
+    let data;
+    try { data = ctx.getImageData(rx, ry, rw, rh).data; } catch(_) {
+      cameraRafId = requestAnimationFrame(tick); return;
+    }
+
+    // Count bright pixels (label background) and dark pixels (text)
+    let bright = 0, dark = 0, total = data.length / 4;
+    for (let i = 0; i < data.length; i += 4) {
+      const lum = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+      if (lum > 180) bright++;
+      else if (lum < 80) dark++;
+    }
+    const brightRatio = bright / total;
+    const darkRatio   = dark  / total;
+
+    // Readable: mostly bright (white label) with some dark (text), not uniformly flat
+    const isReadable = brightRatio > 0.40 && darkRatio > 0.04 && darkRatio < 0.60;
+
+    rect.classList.toggle('readable', isReadable);
+    hint.classList.toggle('readable', isReadable);
+    hint.textContent = isReadable
+      ? '✓ Label looks readable — tap capture'
+      : 'Align nutrition label · ensure good lighting';
+
+    cameraRafId = requestAnimationFrame(tick);
+  }
+  cameraRafId = requestAnimationFrame(tick);
+}
+
+function capturePhoto() {
+  const video = document.getElementById('camera-video');
+  const canvas = document.getElementById('camera-canvas');
+  const MAX = 1200;
+  let w = video.videoWidth, h = video.videoHeight;
+  if (w > MAX || h > MAX) {
+    if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+    else       { w = Math.round(w * MAX / h); h = MAX; }
+  }
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+  canvas.toBlob(blob => {
+    closeCamera();
+    handleFile(new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' }));
+  }, 'image/jpeg', 0.80);
+}
+
+// ===================== FILE UPLOAD =====================
+const fileInput = document.getElementById('file-input');
+const uploadZone = document.getElementById('upload-zone');
+
+fileInput.addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  handleFile(file);
+});
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const originalDataUrl = ev.target.result;
+
+    // Resize + compress before storing — keep max 1200px, JPEG 80%
+    const imgEl = new Image();
+    imgEl.onload = function() {
+      const MAX = 1200;
+      let w = imgEl.width, h = imgEl.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else       { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(imgEl, 0, 0, w, h);
+      const compressed = c.toDataURL('image/jpeg', 0.80);
+      uploadedImageBase64 = compressed.split(',')[1];
+      uploadedImageType = 'image/jpeg';
+
+      const preview = document.getElementById('img-preview');
+      const previewImg = document.getElementById('preview-img');
+      previewImg.src = compressed;
+      preview.classList.add('active');
+
+      document.getElementById('analyze-btn').disabled = false;
+      document.getElementById('results-wrap').classList.remove('active');
+      document.getElementById('loading-state').classList.remove('active');
+      document.getElementById('product-name-wrap').style.display = 'block';
+    };
+    imgEl.src = originalDataUrl;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ===================== ANALYSIS =====================
+async function analyzeImage() {
+  if (!uploadedImageBase64) return;
+
+  const city = document.getElementById('city-value').value.trim() || null;
+
+  document.getElementById('analyze-btn').disabled = true;
+  document.getElementById('results-wrap').classList.remove('active');
+  document.getElementById('loading-state').classList.add('active');
+  const dbgPanel = document.getElementById('debug-panel');
+  if (dbgPanel) dbgPanel.style.display = 'none';
+
+  // Animate loading steps
+  const steps = ['step-1', 'step-2', 'step-3', 'step-4'];
+  let stepIdx = 0;
+  const stepInterval = setInterval(() => {
+    if (stepIdx > 0) document.getElementById(steps[stepIdx-1]).classList.remove('active');
+    if (stepIdx < steps.length) {
+      document.getElementById(steps[stepIdx]).classList.add('active');
+      if (stepIdx > 0) document.getElementById(steps[stepIdx-1]).classList.add('done');
+    }
+    stepIdx++;
+    if (stepIdx >= steps.length) clearInterval(stepInterval);
+  }, 900);
+
+  try {
+    const response = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageBase64: uploadedImageBase64,
+        imageType: uploadedImageType,
+        city: city,
+        productName: document.getElementById('product-name-input').value.trim() || null
+      })
+    });
+
+    const rawText = await response.text();
+    clearInterval(stepInterval);
+    steps.forEach(s => { document.getElementById(s).classList.add('done'); document.getElementById(s).classList.remove('active'); });
+    document.getElementById('loading-state').classList.remove('active');
+
+    let result;
+    try { result = JSON.parse(rawText); }
+    catch(_) {
+      const dbg = document.getElementById('debug-panel');
+      if (dbg) { dbg.style.display = 'block'; dbg.querySelector('pre').textContent = `HTTP ${response.status}\n\n${rawText}`; }
+      showToast('⚠️ API returned invalid data. See debug panel below.');
+      document.getElementById('analyze-btn').disabled = false;
+      return;
+    }
+
+    if (!response.ok || result.error) {
+      const dbg = document.getElementById('debug-panel');
+      if (dbg) { dbg.style.display = 'block'; dbg.querySelector('pre').textContent = `HTTP ${response.status}\n\n${rawText}`; }
+      const msg = result.error || 'Something went wrong. Please try again.';
+      showToast('⚠️ ' + msg);
+      document.getElementById('analyze-btn').disabled = false;
+      return;
+    }
+
+    if (result.not_a_food_label) {
+      showResults(null, city, true);
+    } else {
+      showResults(result, city, false);
+      updateScanCount();
+    }
+
+  } catch (err) {
+    clearInterval(stepInterval);
+    console.error(err);
+    showToast('⚠️ Network error. Check your connection and try again.');
+    document.getElementById('loading-state').classList.remove('active');
+    document.getElementById('analyze-btn').disabled = false;
+  }
+}
+
+// ===================== RENDER RESULTS =====================
+function showResults(data, city, notLabel) {
+  document.getElementById('loading-state').classList.remove('active');
+  const wrap = document.getElementById('results-wrap');
+  wrap.classList.add('active');
+
+  if (notLabel) {
+    wrap.innerHTML = `
+      <div style="text-align:center; padding:2rem; background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); max-width:520px; margin:0 auto;">
+        <div style="font-size:3rem; margin-bottom:1rem;">🤔</div>
+        <h3 style="margin-bottom:0.5rem;">This doesn't look like a nutrition label</h3>
+        <p style="color:var(--muted); font-size:14px;">Try photographing the back of a packet — the table with protein, carbs, fat values.</p>
+        <button class="try-again-btn" onclick="resetScan()">Try again</button>
+      </div>`;
+    return;
+  }
+
+  currentResults = data;
+  const s = data;
+  const score = Math.round(s.nutri_iq_score);
+  const colorClass = s.score_color === 'great' ? 'score-great' : s.score_color === 'ok' ? 'score-ok' : 'score-bad';
+  const strokeColor = s.score_color === 'great' ? '#22C55E' : s.score_color === 'ok' ? '#F59E0B' : '#EF4444';
+  const circumference = 2 * Math.PI * 54;
+  const dash = circumference - (score / 100) * circumference;
+
+  const goodPills = (s.verdicts.good || []).map(v => `<span class="verdict-pill pill-good">✓ ${v}</span>`).join('');
+  const badPills = (s.verdicts.bad || []).map(v => `<span class="verdict-pill pill-bad">✗ ${v}</span>`).join('');
+  const neutralPills = (s.verdicts.neutral || []).map(v => `<span class="verdict-pill pill-ok">○ ${v}</span>`).join('');
+
+  const p = s.per_100g;
+  const phabGap = s.phab_comparison.nutri_iq_gap;
+  const phabBetter = phabGap > 0;
+
+  wrap.innerHTML = `
+    <div class="score-hero" style="--score-color:${strokeColor}">
+      <div class="score-ring-wrap">
+        <svg class="score-ring" viewBox="0 0 120 120">
+          <circle class="score-ring-bg" cx="60" cy="60" r="54"/>
+          <circle class="score-ring-fill" cx="60" cy="60" r="54"
+            stroke="${strokeColor}"
+            stroke-dasharray="${circumference}"
+            stroke-dashoffset="${circumference}"
+            id="ring-fill"/>
+        </svg>
+        <div class="score-center">
+          <div class="score-num ${colorClass}">${score}</div>
+          <div class="score-denom">/100</div>
+        </div>
+      </div>
+      <div class="score-grade ${colorClass}">${s.score_grade}</div>
+      <div style="font-size:1rem; font-weight:600; margin-bottom:0.25rem;">${s.product_name}</div>
+      <div class="score-tagline">${s.body_impact}</div>
+    </div>
+
+    <div class="nutrient-grid">
+      ${nutriCard('Protein', p.protein_g + 'g', p.protein_g / 0.5, '#22C55E', 'per 100g · ' + s.protein_per_100kcal.toFixed(1) + 'g per 100kcal')}
+      ${nutriCard('Sugar', p.sugar_g + 'g', Math.min(p.sugar_g / 30 * 100, 100), p.sugar_g > 15 ? '#EF4444' : p.sugar_g > 5 ? '#F59E0B' : '#22C55E', 'per 100g · ' + (p.sugar_g > 15 ? 'high' : p.sugar_g > 5 ? 'moderate' : 'low'))}
+      ${nutriCard('Calories', p.calories + ' kcal', Math.min(p.calories / 6, 100), '#4eaaff', 'per 100g')}
+      ${nutriCard('Fibre', p.fibre_g + 'g', p.fibre_g / 10 * 100, '#b87fff', 'per 100g · ' + (p.fibre_g >= 5 ? 'good' : p.fibre_g >= 2 ? 'moderate' : 'low'))}
+    </div>
+
+    <div class="breakdown-card">
+      <div class="breakdown-title"><span class="icon">🔬</span> Verdict</div>
+      <div class="verdict-row">${goodPills}${badPills}${neutralPills}</div>
+    </div>
+
+    ${phabBetter ? `
+    <div class="phab-cta">
+      <div class="phab-cta-head">Phab NutriIQ — 82/100</div>
+      <h3>This food scores ${phabGap} points lower than a Phab bar</h3>
+      <div class="phab-compare-row">
+        <div class="compare-col">
+          <div class="compare-col-label">This product</div>
+          <div class="compare-col-val">${s.phab_comparison.this_protein_per_100kcal.toFixed(1)}g</div>
+          <div style="font-size:11px; color:rgba(255,255,255,0.4); margin-top:2px;">protein / 100kcal</div>
+        </div>
+        <div class="compare-vs">vs</div>
+        <div class="compare-col" style="background:rgba(232,84,26,0.15); border:1px solid rgba(232,84,26,0.3);">
+          <div class="compare-col-label" style="color:var(--phab);">Phab bar</div>
+          <div class="compare-col-val" style="color:var(--phab);">17.5g</div>
+          <div style="font-size:11px; color:rgba(232,84,26,0.6); margin-top:2px;">protein / 100kcal</div>
+        </div>
+      </div>
+      <div style="font-size:13px; color:rgba(255,255,255,0.6);">Same snack occasion. <span class="phab-score-boost">+${phabGap} NutriIQ</span> smarter choice.</div>
+    </div>` : `
+    <div class="phab-cta">
+      <div class="phab-cta-head">Phab NutriIQ — 82/100</div>
+      <h3>You're already eating smart 🎯</h3>
+      <div style="font-size:13px; color:rgba(255,255,255,0.6);">This food scores ${Math.abs(phabGap)} points ${phabGap < 0 ? 'higher than' : 'equal to'} a Phab bar. Keep it up.</div>
+    </div>`}
+
+    <div class="share-row">
+      <button class="share-btn primary" onclick="shareResult()">
+        📤 Share my score
+      </button>
+      <button class="share-btn" onclick="shareCity('${city}', ${score})">
+        🏙️ Post to ${city || 'city'} board
+      </button>
+    </div>
+    <div style="text-align:center; margin-bottom:1rem;">
+      <button class="try-again-btn" onclick="resetScan()">← Scan another</button>
+    </div>
+  `;
+
+  // Animate ring
+  setTimeout(() => {
+    const fill = document.getElementById('ring-fill');
+    if (fill) fill.style.strokeDashoffset = dash;
+  }, 100);
+}
+
+function nutriCard(label, value, pct, color, note) {
+  const clampedPct = Math.min(Math.max(pct, 0), 100);
+  return `
+    <div class="nutrient-card">
+      <div class="nutrient-label">${label}</div>
+      <div class="nutrient-val" style="color:${color}">${value}</div>
+      <div class="nutrient-bar-bg">
+        <div class="nutrient-bar-fill" style="width:${clampedPct}%; background:${color}"></div>
+      </div>
+      <div class="nutrient-note">${note}</div>
+    </div>`;
+}
+
+// ===================== LEADERBOARD =====================
+async function renderLeaderboard() {
+  const lb = document.getElementById('lb-content');
+  lb.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:14px;">Loading…</div>';
+  try {
+    const res = await fetch(`/api/leaderboard?mode=${lbMode}`);
+    const json = await res.json();
+    if (!json.ok || !json.data || !json.data.length) {
+      lb.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--muted);font-size:14px;">
+        <div style="font-size:2rem;margin-bottom:1rem;">📡</div>
+        <strong>No city data yet</strong><br>
+        Cities appear once they have 10+ scans in the last 7 days.
+      </div>`;
+      return;
+    }
+    const data = json.data;
+    const maxScore = data[0].avg_score;
+    lb.innerHTML = data.map((row, i) => {
+      const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+      const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+      const trend = parseFloat(row.trend_7d) || 0;
+      const trendClass = trend >= 0 ? 'trend-up' : 'trend-down';
+      const trendArrow = trend >= 0 ? '↑' : '↓';
+      const barPct = (row.avg_score / maxScore) * 100;
+      return `
+        <div class="lb-row">
+          <div class="lb-rank ${rankClass}">${rankLabel}</div>
+          <div class="lb-city-info">
+            <div class="lb-city-name">${row.city}</div>
+            <div class="lb-city-meta">${Number(row.scan_count).toLocaleString()} scans · <span class="${trendClass}">${trendArrow} ${Math.abs(trend).toFixed(1)} 7d</span></div>
+            <div class="lb-bar-wrap"><div class="lb-bar" style="width:${barPct}%"></div></div>
+          </div>
+          <div class="lb-score-col">
+            <div class="lb-score-val">${row.avg_score}</div>
+            <div class="lb-score-label">NutriIQ</div>
+          </div>
+        </div>`;
+    }).join('');
+  } catch (err) {
+    lb.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--muted);font-size:14px;">Could not load leaderboard. ${err.message}</div>`;
+  }
+}
+
+function switchLbTab(mode, el) {
+  lbMode = mode;
+  document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderLeaderboard();
+}
+
+// ===================== MISC =====================
+function resetScan() {
+  uploadedImageBase64 = null;
+  document.getElementById('img-preview').classList.remove('active');
+  document.getElementById('results-wrap').classList.remove('active');
+  document.getElementById('results-wrap').innerHTML = '';
+  document.getElementById('analyze-btn').disabled = true;
+  document.getElementById('file-input').value = '';
+  document.querySelectorAll('.loading-step').forEach(s => { s.classList.remove('active', 'done'); });
+  document.getElementById('product-name-input').value = '';
+  document.getElementById('product-name-wrap').style.display = 'none';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function shareResult() {
+  if (!currentResults) return;
+  openShareCard(currentResults);
+}
+
+// ===================== AUTO-DETECT CITY =====================
+function setCity(city) {
+  document.getElementById('city-value').value = city;
+  document.getElementById('city-detecting-badge').style.display = 'none';
+  document.getElementById('city-manual-wrap').style.display = 'none';
+  const badge = document.getElementById('city-auto-badge');
+  badge.style.display = 'flex';
+  document.getElementById('city-detected-name').textContent = city;
+}
+
+function showCityInput() {
+  document.getElementById('city-auto-badge').style.display = 'none';
+  document.getElementById('city-manual-wrap').style.display = 'block';
+  const input = document.getElementById('city-manual-input');
+  input.value = document.getElementById('city-value').value;
+  input.focus();
+  input.oninput = () => { document.getElementById('city-value').value = input.value.trim(); };
+}
+
+async function autoDetectCity() {
+  if (!navigator.geolocation) {
+    document.getElementById('city-manual-wrap').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('city-detecting-badge').style.display = 'flex';
+
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      try {
+        const { latitude, longitude } = pos.coords;
+        const res = await fetch(`/api/geocode?lat=${latitude}&lon=${longitude}`);
+        if (!res.ok) throw new Error('geocode failed');
+        const data = await res.json();
+        const detected = data.city || '';
+        if (!detected) throw new Error('no city');
+        setCity(detected);
+        showToast(`📍 City detected: ${detected}`);
+      } catch (_) {
+        document.getElementById('city-detecting-badge').style.display = 'none';
+        document.getElementById('city-manual-wrap').style.display = 'block';
+      }
+    },
+    () => {
+      // Permission denied — show manual input
+      document.getElementById('city-detecting-badge').style.display = 'none';
+      document.getElementById('city-manual-wrap').style.display = 'block';
+    },
+    { timeout: 10000, maximumAge: 300000 }
+  );
+}
+
+// ===================== SHARE CARD =====================
+function openShareCard(data) {
+  const overlay = document.getElementById('share-modal-overlay');
+  overlay.classList.remove('hidden');
+  const canvas = document.getElementById('share-canvas');
+  drawShareCard(canvas, data);
+}
+
+function closeShareModal(e) {
+  if (e && e.target !== document.getElementById('share-modal-overlay')) return;
+  document.getElementById('share-modal-overlay').classList.add('hidden');
+}
+
+function downloadShareCard() {
+  const canvas = document.getElementById('share-canvas');
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  const name = (currentResults && currentResults.product_name)
+    ? currentResults.product_name.replace(/[^a-z0-9]/gi, '_').slice(0, 30)
+    : 'nutriiq';
+  a.download = `${name}_nutriiq.png`;
+  a.click();
+}
+
+function drawShareCard(canvas, data) {
+  // Card is 540×960 (9:16 ratio, renders crisply on mobile)
+  const W = 540, H = 960;
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // ---- Helpers ----
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  function wrapText(text, x, y, maxWidth, lineHeight) {
+    const words = String(text).split(' ');
+    let line = '';
+    for (let i = 0; i < words.length; i++) {
+      const test = line + (line ? ' ' : '') + words[i];
+      if (ctx.measureText(test).width > maxWidth && line) {
+        ctx.fillText(line, x, y);
+        line = words[i];
+        y += lineHeight;
+      } else { line = test; }
+    }
+    if (line) ctx.fillText(line, x, y);
+    return y;
+  }
+
+  // ---- Score color ----
+  const score = Math.round(data.nutri_iq_score || 0);
+  const scoreColor = score >= 75 ? '#1db96a' : score >= 50 ? '#e8a030' : '#e84040';
+
+  // ---- Dark background ----
+  ctx.fillStyle = '#0D1117';
+  ctx.fillRect(0, 0, W, H);
+
+  // ---- Subtle radial glow behind score circle ----
+  const glow = ctx.createRadialGradient(W / 2, 240, 0, W / 2, 240, 260);
+  glow.addColorStop(0, scoreColor + '22');
+  glow.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, 500);
+
+  // ---- Top teal accent bar ----
+  ctx.fillStyle = '#00B4C8';
+  roundRect(0, 0, W, 6, 0);
+  ctx.fill();
+
+  // ---- Brand header ----
+  ctx.font = 'bold 18px "Arial", sans-serif';
+  ctx.fillStyle = '#00B4C8';
+  ctx.textAlign = 'left';
+  ctx.fillText('phab', 36, 52);
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = '14px "Arial", sans-serif';
+  ctx.fillText('NutriIQ', 82, 52);
+
+  // ---- Tier pill ----
+  const tier = (data.tier_label || '').replace(/_/g, ' ').toUpperCase();
+  ctx.font = 'bold 11px "Arial", sans-serif';
+  const pillW = ctx.measureText(tier).width + 24;
+  roundRect(W - 36 - pillW, 36, pillW, 24, 12);
+  ctx.fillStyle = scoreColor + '33';
+  ctx.fill();
+  ctx.strokeStyle = scoreColor;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = scoreColor;
+  ctx.textAlign = 'right';
+  ctx.fillText(tier, W - 36, 52);
+
+  // ---- Score ring ----
+  const cx = W / 2, cy = 230, radius = 110, lineW = 14;
+  // Track
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = lineW;
+  ctx.stroke();
+  // Fill arc (score out of 100)
+  const startAngle = -Math.PI / 2;
+  const endAngle = startAngle + (score / 100) * Math.PI * 2;
+  const grad = ctx.createLinearGradient(cx - radius, cy, cx + radius, cy);
+  grad.addColorStop(0, '#00B4C8');
+  grad.addColorStop(1, scoreColor);
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, startAngle, endAngle);
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = lineW;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  // Score number
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 72px "Arial", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(score, cx, cy + 24);
+  // "/100" label
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = '16px "Arial", sans-serif';
+  ctx.fillText('/ 100', cx, cy + 50);
+  // "NutriIQ" inside ring
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = '13px "Arial", sans-serif';
+  ctx.fillText('NutriIQ Score', cx, cy - 78);
+
+  // ---- Product name ----
+  const productName = data.product_name || 'Unknown Product';
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 26px "Arial", sans-serif';
+  ctx.textAlign = 'center';
+  const maxNameWidth = W - 80;
+  if (ctx.measureText(productName).width > maxNameWidth) {
+    ctx.font = 'bold 20px "Arial", sans-serif';
+  }
+  wrapText(productName, cx, 386, maxNameWidth, 30);
+
+  // ---- Divider ----
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(36, 430); ctx.lineTo(W - 36, 430);
+  ctx.stroke();
+
+  // ---- Key stats (3 cards in a row) ----
+  const stats = [
+    {
+      label: 'Protein Eff.',
+      value: data.protein_per_100kcal != null ? `${Number(data.protein_per_100kcal).toFixed(1)}g` : '—',
+      sub: 'per 100 kcal',
+      color: '#00B4C8'
+    },
+    {
+      label: 'Sugar',
+      value: data.per_100g && data.per_100g.sugar_g != null ? `${Number(data.per_100g.sugar_g).toFixed(1)}g` : '—',
+      sub: 'per 100g',
+      color: score >= 75 ? '#1db96a' : '#e8a030'
+    },
+    {
+      label: 'Additives',
+      value: data.has_artificial_additives ? 'YES' : 'NONE',
+      sub: 'artificial',
+      color: data.has_artificial_additives ? '#e84040' : '#1db96a'
+    }
+  ];
+
+  const cardW = (W - 36 * 2 - 12 * 2) / 3;
+  const cardH = 100;
+  const cardY = 450;
+  stats.forEach((s, i) => {
+    const cardX = 36 + i * (cardW + 12);
+    roundRect(cardX, cardY, cardW, cardH, 12);
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Value
+    ctx.fillStyle = s.color;
+    ctx.font = 'bold 22px "Arial", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(s.value, cardX + cardW / 2, cardY + 38);
+    // Label
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 11px "Arial", sans-serif';
+    ctx.fillText(s.label, cardX + cardW / 2, cardY + 58);
+    // Sub
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '10px "Arial", sans-serif';
+    ctx.fillText(s.sub, cardX + cardW / 2, cardY + 74);
+  });
+
+  // ---- Score grade badge ----
+  if (data.score_grade) {
+    ctx.font = 'bold 13px "Arial", sans-serif';
+    ctx.textAlign = 'center';
+    const gradeText = `Grade: ${data.score_grade}`;
+    const gW = ctx.measureText(gradeText).width + 28;
+    roundRect(cx - gW / 2, 570, gW, 28, 14);
+    ctx.fillStyle = scoreColor + '22';
+    ctx.fill();
+    ctx.strokeStyle = scoreColor + '88';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = scoreColor;
+    ctx.fillText(gradeText, cx, 589);
+  }
+
+  // ---- Body impact text ----
+  if (data.body_impact) {
+    const impactY = data.score_grade ? 630 : 600;
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.font = '14px "Arial", sans-serif';
+    ctx.textAlign = 'center';
+    wrapText(data.body_impact, cx, impactY, W - 72, 22);
+  }
+
+  // ---- Bottom branding ----
+  // Teal bottom bar
+  ctx.fillStyle = '#00B4C8';
+  roundRect(0, H - 6, W, 6, 0);
+  ctx.fill();
+
+  // Phab logo area
+  roundRect(36, H - 90, W - 72, 60, 12);
+  ctx.fillStyle = 'rgba(0,180,200,0.08)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,180,200,0.25)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.fillStyle = '#00B4C8';
+  ctx.font = 'bold 18px "Arial", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('phab NutriIQ', cx, H - 60);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = '12px "Arial", sans-serif';
+  ctx.fillText('scan.phab.in · science-backed food intelligence', cx, H - 42);
+}
+
+function shareCity(city, score) {
+  showToast(`✓ Score posted to ${city || 'city'} leaderboard!`);
+  // In production: POST to backend, update city rolling avg
+}
+
+async function updateScanCount() {
+  try {
+    const res = await fetch('/api/feed');
+    const json = await res.json();
+    if (!json.ok) return;
+    const rows = json.data || [];
+    const today = rows.filter(r => new Date(r.created_at).toDateString() === new Date().toDateString()).length;
+    const cities = new Set(rows.map(r => r.city).filter(Boolean)).size;
+    const el = document.getElementById('scan-count');
+    if (today > 0) {
+      el.textContent = `${today.toLocaleString()} scan${today === 1 ? '' : 's'} today${cities > 0 ? ` · ${cities} cit${cities === 1 ? 'y' : 'ies'} competing` : ''}`;
+    } else {
+      el.textContent = rows.length > 0 ? `${rows.length.toLocaleString()} total scans` : 'Be the first to scan today';
+    }
+  } catch (_) {}
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// Init leaderboard and live stats
+renderLeaderboard();
+updateScanCount();
+// Auto-detect city from browser geolocation on page load
+autoDetectCity();
+
+// ===================== LIVE FEED =====================
+let feedInterval = null;
+let feedInitialized = false;
+let lastFeedIds = new Set();
+let _lastFeedRows = [];
+
+function getTierColor(score) {
+  if (score >= 75) return 'great';
+  if (score >= 50) return 'ok';
+  return 'bad';
+}
+
+function timeAgo(iso) {
+  const diff = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
+
+async function fetchFeed() {
+  try {
+    const res = await fetch('/api/feed');
+    const json = await res.json();
+
+    if (!json.ok) {
+      document.getElementById('feed-content').innerHTML = `
+        <div style="text-align:center; padding:3rem; color:var(--muted); font-size:14px;">
+          <div style="font-size:2rem; margin-bottom:1rem;">🔌</div>
+          <strong>Not connected</strong><br>
+          ${json.error || 'Check SUPABASE_URL and SUPABASE_SERVICE_KEY in Vercel.'}
+        </div>`;
+      return;
+    }
+
+    const rows = json.data || [];
+    _lastFeedRows = rows;
+
+    // Stats
+    const total = rows.length;
+    const avg = total ? Math.round(rows.reduce((s, r) => s + (r.nutri_iq_score || 0), 0) / total) : '—';
+    const today = rows.filter(r => new Date(r.created_at).toDateString() === new Date().toDateString()).length;
+
+    document.getElementById('feed-total').textContent = total.toLocaleString();
+    document.getElementById('feed-avg').textContent = avg;
+    document.getElementById('feed-today').textContent = today;
+
+    // Detect new rows for animation
+    const newIds = new Set(rows.map(r => r.id));
+
+    const tableRows = rows.map(r => {
+      const isNew = !lastFeedIds.has(r.id) && feedInitialized;
+      const scoreColor = getTierColor(r.nutri_iq_score);
+      const tier = (r.tier_label || '').replace(/_/g, ' ');
+      return `<tr class="${isNew ? 'feed-new-row' : ''}">
+        <td style="color:var(--muted); font-family:'Space Mono',monospace; font-size:12px;">${timeAgo(r.created_at)}</td>
+        <td><strong>${r.product_name || '—'}</strong></td>
+        <td>${r.city ? `<span class="feed-city-badge">📍 ${r.city}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
+        <td><span class="feed-score-pill ${scoreColor}">${r.nutri_iq_score ?? '—'}</span></td>
+        <td class="feed-tier">${tier}</td>
+        <td style="font-size:12px; color:var(--muted);">${r.protein_per_100kcal != null ? r.protein_per_100kcal.toFixed(1) + 'g/100kcal' : '—'}</td>
+        <td style="font-size:12px; text-align:center;">${r.has_artificial_additives ? '⚠️' : '✅'}</td>
+      </tr>`;
+    }).join('');
+
+    document.getElementById('feed-content').innerHTML = `
+      <div style="text-align:right; margin-bottom:0.75rem;">
+        <button onclick="exportFeedCSV()" style="background:var(--surface); border:1.5px solid var(--border); border-radius:8px; padding:6px 16px; font-size:13px; cursor:pointer; font-family:inherit;">⬇ Export CSV</button>
+      </div>
+      <table class="feed-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Product</th>
+            <th>City</th>
+            <th>Score</th>
+            <th>Tier</th>
+            <th>Protein Eff.</th>
+            <th>Additives</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+      <div class="feed-refresh">
+        Auto-refreshes every 30s &nbsp;·&nbsp;
+        <button onclick="fetchFeed()">↻ Refresh now</button>
+      </div>`;
+
+    lastFeedIds = newIds;
+    feedInitialized = true;
+
+  } catch (err) {
+    console.error('Feed error:', err);
+    document.getElementById('feed-content').innerHTML = `<div class="feed-loading">Could not load feed. ${err.message}</div>`;
+  }
+}
+
+function exportFeedCSV() {
+  if (!_lastFeedRows.length) { alert('No data to export yet. Refresh the feed first.'); return; }
+  const header = ['Time','Product','City','Score','Tier','Protein/100kcal','Sugar/100g','Additives'];
+  const rows = _lastFeedRows.map(r => [
+    r.created_at, r.product_name || '', r.city || '',
+    r.nutri_iq_score ?? '', r.tier_label || '',
+    r.protein_per_100kcal ?? '', r.sugar_per_100g ?? '',
+    r.has_artificial_additives ? 'Yes' : 'No'
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+  const csv = [header.join(','), ...rows].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = `nutriiq-feed-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+function initFeed() {
+  fetchFeed();
+  if (!feedInterval) {
+    feedInterval = setInterval(fetchFeed, 30000);
+  }
+}
+</script>
+</body>
+</html>
