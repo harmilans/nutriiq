@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,28 +8,30 @@
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 
   :root {
-    --bg:          #F5F4EF;
+    --bg:          #F0FAFB;
     --surface:     #ffffff;
-    --surface2:    #ECEAE3;
-    --border:      #D8D7D2;
-    --text:        #0E0E0E;
-    --muted:       #6B6B6B;
-    --phab:        #C8F04E;
-    --phab-dark:   #3A5A00;
-    --phab-light:  #E8F5C8;
-    --obsidian:    #0E0E0E;
-    --graphite:    #2B2B2B;
-    --green:       #3A5A00;
-    --green-light: #E8F5C8;
-    --yellow:      #7A5300;
-    --yellow-light:#FFF3D6;
-    --red:         #B00020;
-    --red-light:   #FFE8EC;
-    --score-great: #3A5A00;
-    --score-ok:    #7A5300;
-    --score-bad:   #B00020;
+    --surface2:    #E3F5F7;
+    --border:      #C2E8EC;
+    --text:        #1A2E30;
+    --muted:       #5A8A8E;
+    --phab:        #00B4C8;
+    --phab-dark:   #007F8F;
+    --phab-light:  #E0F7FA;
+    --obsidian:    #00B4C8;
+    --graphite:    #1A2E30;
+    --brown:       #5C3317;
+    --brown-light: #F9EFE7;
+    --green:       #1a7a4a;
+    --green-light: #e8f5ee;
+    --yellow:      #d4820a;
+    --yellow-light:#fff8e6;
+    --red:         #c0392b;
+    --red-light:   #fdecea;
+    --score-great: #1a7a4a;
+    --score-ok:    #d4820a;
+    --score-bad:   #c0392b;
     --radius:      16px;
-    --radius-sm:   8px;
+    --radius-sm:   10px;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -46,7 +47,7 @@
 
   /* NAV */
   nav {
-    background: var(--obsidian);
+    background: var(--phab);
     border-bottom: none;
     padding: 0 1.5rem;
     height: 56px;
@@ -60,33 +61,32 @@
   .nav-logo {
     font-family: 'Space Grotesk', sans-serif;
     font-weight: 700;
-    font-size: 18px;
-    color: var(--phab);
+    font-size: 20px;
+    color: #fff;
     letter-spacing: -0.5px;
   }
-  .nav-logo span { color: rgba(255,255,255,0.5); font-weight: 400; font-size: 13px; margin-left: 6px; letter-spacing: 0; }
+  .nav-logo span { color: rgba(255,255,255,0.7); font-weight: 400; font-size: 13px; margin-left: 6px; letter-spacing: 0; }
   .nav-right {
     display: flex;
     gap: 0.5rem;
     align-items: center;
   }
   .nav-tab {
-    font-size: 12px;
+    font-size: 13px;
     font-family: 'DM Sans', sans-serif;
-    font-weight: 500;
-    letter-spacing: 0.3px;
-    color: rgba(255,255,255,0.45);
+    font-weight: 600;
+    color: rgba(255,255,255,0.75);
     cursor: pointer;
     padding: 0.35rem 0.85rem;
     border-radius: 20px;
-    border: 1px solid transparent;
+    border: 1.5px solid transparent;
     transition: all 0.2s;
     background: none;
   }
   .nav-tab.active, .nav-tab:hover {
-    color: var(--obsidian);
-    background: var(--phab);
-    border-color: var(--phab);
+    color: var(--phab);
+    background: #fff;
+    border-color: #fff;
   }
 
   /* PAGES */
@@ -95,52 +95,66 @@
 
   /* HERO */
   .hero {
-    background: var(--obsidian);
+    background: linear-gradient(160deg, #00B4C8 0%, #009BAD 100%);
     padding: 3.5rem 1.5rem 3rem;
     text-align: center;
     position: relative;
     overflow: hidden;
   }
-  .hero::after {
+  .hero::before {
     content: '';
     position: absolute;
-    bottom: -80px; right: -80px;
-    width: 300px; height: 300px;
-    background: var(--phab);
+    top: -60px; right: -60px;
+    width: 260px; height: 260px;
+    background: #fff;
     border-radius: 50%;
     opacity: 0.06;
     pointer-events: none;
   }
-  .hero-inner { max-width: 640px; margin: 0 auto; position: relative; z-index: 1; }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; left: -40px;
+    width: 220px; height: 220px;
+    background: #fff;
+    border-radius: 50%;
+    opacity: 0.05;
+    pointer-events: none;
+  }
+  .hero-inner { max-width: 600px; margin: 0 auto; position: relative; z-index: 1; }
   .hero-eyebrow {
     display: inline-block;
     font-family: 'DM Sans', sans-serif;
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 2.5px;
     text-transform: uppercase;
-    color: var(--phab);
+    color: rgba(255,255,255,0.85);
+    background: rgba(255,255,255,0.15);
+    padding: 0.3rem 0.9rem;
+    border-radius: 20px;
     margin-bottom: 1.25rem;
   }
   .hero h1 {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: clamp(2.2rem, 7vw, 3.8rem);
+    font-size: clamp(2rem, 6vw, 3.2rem);
     font-weight: 700;
-    line-height: 0.95;
-    margin-bottom: 1.25rem;
-    letter-spacing: -2px;
+    line-height: 1.05;
+    margin-bottom: 1rem;
+    letter-spacing: -1.5px;
     color: #fff;
   }
   .hero h1 em {
-    color: var(--phab);
-    font-style: normal;
+    color: #fff;
+    font-style: italic;
+    opacity: 0.9;
   }
   .hero-sub {
-    color: rgba(255,255,255,0.5);
+    color: rgba(255,255,255,0.8);
     font-size: 15px;
     max-width: 440px;
     margin: 0 auto 2rem;
-    font-weight: 300;
+    font-weight: 400;
     line-height: 1.7;
   }
 
@@ -214,19 +228,20 @@
     display: block;
     margin: 0 auto;
     background: var(--phab);
-    color: var(--obsidian);
+    color: #fff;
     border: none;
     padding: 0.9rem 2.5rem;
-    border-radius: var(--radius-sm);
-    font-family: 'Space Grotesk', sans-serif;
+    border-radius: 100px;
+    font-family: 'DM Sans', sans-serif;
     font-size: 16px;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
-    letter-spacing: -0.3px;
+    letter-spacing: 0.2px;
+    box-shadow: 0 4px 16px rgba(0,180,200,0.35);
   }
-  .btn-analyze:hover { background: #d4ff5a; transform: translateY(-1px); }
-  .btn-analyze:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
+  .btn-analyze:hover { background: var(--phab-dark); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,180,200,0.4); }
+  .btn-analyze:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; box-shadow: none; }
 
   /* LOADING STATE */
   .loading-state {
@@ -440,7 +455,7 @@
 
   /* PHAB COMPARISON */
   .phab-cta {
-    background: linear-gradient(135deg, #1a1208 0%, #2d1a08 100%);
+    background: linear-gradient(135deg, #00B4C8 0%, #007F8F 100%);
     border-radius: var(--radius);
     padding: 1.5rem;
     color: white;
@@ -537,14 +552,14 @@
     gap: 0.4rem;
     color: var(--text);
   }
-  .share-btn:hover { border-color: var(--obsidian); background: var(--obsidian); color: var(--phab); }
+  .share-btn:hover { border-color: var(--phab); color: var(--phab); background: var(--phab-light); }
   .share-btn.primary {
     background: var(--phab);
     border-color: var(--phab);
-    color: var(--obsidian);
+    color: #fff;
     font-weight: 700;
   }
-  .share-btn.primary:hover { background: #d4ff5a; }
+  .share-btn.primary:hover { background: var(--phab-dark); }
 
   /* LEADERBOARD PAGE */
   .leaderboard-wrap, .feed-wrap {
@@ -682,7 +697,7 @@
     background: none;
     border: none;
   }
-  .lb-tab.active { background: var(--obsidian); color: var(--phab); }
+  .lb-tab.active { background: var(--phab); color: #fff; }
 
   .lb-card {
     background: var(--surface);
@@ -824,20 +839,20 @@
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    background: rgba(200,240,78,0.12);
-    border: 1px solid rgba(200,240,78,0.25);
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.35);
     border-radius: 20px;
     padding: 0.3rem 0.75rem;
     font-size: 11px;
     font-family: 'DM Sans', sans-serif;
     font-weight: 600;
     letter-spacing: 0.3px;
-    color: var(--phab);
+    color: #fff;
     margin-bottom: 1.5rem;
   }
   .scan-badge .dot {
     width: 6px; height: 6px;
-    background: var(--phab);
+    background: #fff;
     border-radius: 50%;
     animation: pulse 2s infinite;
   }
@@ -860,7 +875,7 @@
     cursor: pointer;
     transition: all 0.2s;
   }
-  .try-again-btn:hover { border-color: var(--obsidian); background: var(--obsidian); color: var(--phab); }
+  .try-again-btn:hover { border-color: var(--phab); color: var(--phab); background: var(--phab-light); }
 
   /* SCORE COLORS */
   .score-great { color: var(--score-great); }
