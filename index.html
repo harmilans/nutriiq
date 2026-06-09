@@ -1410,22 +1410,19 @@ async function analyzeImage() {
     steps.forEach(s => { document.getElementById(s).classList.add('done'); document.getElementById(s).classList.remove('active'); });
     document.getElementById('loading-state').classList.remove('active');
 
-    // Debug panel — always show raw response
-    const dbg = document.getElementById('debug-panel');
-    if (dbg) {
-      dbg.style.display = 'block';
-      dbg.querySelector('pre').textContent = `HTTP ${response.status}\n\n${rawText}`;
-    }
-
     let result;
     try { result = JSON.parse(rawText); }
     catch(_) {
+      const dbg = document.getElementById('debug-panel');
+      if (dbg) { dbg.style.display = 'block'; dbg.querySelector('pre').textContent = `HTTP ${response.status}\n\n${rawText}`; }
       showToast('⚠️ API returned invalid data. See debug panel below.');
       document.getElementById('analyze-btn').disabled = false;
       return;
     }
 
     if (!response.ok || result.error) {
+      const dbg = document.getElementById('debug-panel');
+      if (dbg) { dbg.style.display = 'block'; dbg.querySelector('pre').textContent = `HTTP ${response.status}\n\n${rawText}`; }
       const msg = result.error || 'Something went wrong. Please try again.';
       showToast('⚠️ ' + msg);
       document.getElementById('analyze-btn').disabled = false;
