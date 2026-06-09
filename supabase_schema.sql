@@ -71,15 +71,15 @@ begin
     v_col := 'nutri_iq_score';
   end if;
 
-  return query execute format($$
-    with current_period as (
+  return query execute format(
+    'with current_period as (
       select
         city,
         avg(%I) as avg_val,
         count(*) as cnt
       from scans
       where
-        created_at > now() - interval '7 days'
+        created_at > now() - interval ''7 days''
         and city is not null
         and %I is not null
       group by city
@@ -91,25 +91,24 @@ begin
         avg(%I) as avg_val
       from scans
       where
-        created_at between now() - interval '14 days' and now() - interval '7 days'
+        created_at between now() - interval ''14 days'' and now() - interval ''7 days''
         and city is not null
         and %I is not null
       group by city
     )
     select
       c.city,
-      round(case when %L then (100 - c.avg_val) else c.avg_val end::numeric, 1) as avg_score,
+      round(case when %s then (100 - c.avg_val) else c.avg_val end::numeric, 1) as avg_score,
       c.cnt as scan_count,
       round(
-        (case when %L then (100 - c.avg_val) else c.avg_val end -
-         case when %L then (100 - coalesce(p.avg_val, c.avg_val)) else coalesce(p.avg_val, c.avg_val) end
+        (case when %s then (100 - c.avg_val) else c.avg_val end -
+         case when %s then (100 - coalesce(p.avg_val, c.avg_val)) else coalesce(p.avg_val, c.avg_val) end
         )::numeric, 1
       ) as trend_7d
     from current_period c
     left join prior_period p using (city)
     order by avg_score desc
-    limit 20
-  $$,
+    limit 20',
     v_col, v_col, p_min_scans,
     v_col, v_col,
     v_invert, v_invert, v_invert
