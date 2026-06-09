@@ -151,6 +151,17 @@ async function persistScan(result, city, ip) {
   const { createClient } = await import('@supabase/supabase-js');
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
+  // Dedup: skip if same ip_hash scanned same product within last 5 minutes
+  const ipHash = hashIp(ip);
+  const { data: recent } = await supabase
+    .from('scans')
+    .select('id')
+    .eq('ip_hash', ipHash)
+    .eq('product_name', result.product_name)
+    .gte('created_at', new Date(Date.now() - 5 * 60 * 1000).toISOString())
+    .limit(1);
+  if (recent && recent.length > 0) return; // duplicate, skip
+
   await supabase.from('scans').insert({
     city: city || null,
     product_name: result.product_name,
