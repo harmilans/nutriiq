@@ -1721,46 +1721,47 @@ async function autoDetectCity() {
   const select = document.getElementById('city-select');
   if (!select) return;
 
+  // Show detecting state
+  const placeholder = select.options[0];
+  const origText = placeholder.textContent;
+  placeholder.textContent = '📡 Detecting city…';
+
   navigator.geolocation.getCurrentPosition(
     async (pos) => {
       try {
         const { latitude, longitude } = pos.coords;
-        const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`;
-        const res = await fetch(url, {
-          headers: { 'Accept-Language': 'en', 'User-Agent': 'NutriIQ/1.0 (scan.phab.in)' }
-        });
-        if (!res.ok) return;
+        const res = await fetch(`/api/geocode?lat=${latitude}&lon=${longitude}`);
+        if (!res.ok) { placeholder.textContent = origText; return; }
         const data = await res.json();
-        const addr = data.address || {};
-        // Nominatim returns city/town/village/county in priority order
-        const detected = addr.city || addr.town || addr.village || addr.county || addr.state_district || '';
-        if (!detected) return;
+        const detected = data.city || '';
+        if (!detected) { placeholder.textContent = origText; return; }
 
-        // Try to match against existing <option> values (case-insensitive prefix match)
+        // Try to match existing option (case-insensitive)
         const options = Array.from(select.options);
         const matched = options.find(o =>
-          o.value && detected.toLowerCase().includes(o.value.toLowerCase())
+          o.value && (
+            o.value.toLowerCase() === detected.toLowerCase() ||
+            detected.toLowerCase().includes(o.value.toLowerCase())
+          )
         );
         if (matched) {
           select.value = matched.value;
         } else {
-          // Insert a detected option if not in list
           const opt = document.createElement('option');
           opt.value = detected;
-          opt.textContent = `📍 ${detected} (detected)`;
+          opt.textContent = `📍 ${detected}`;
           opt.selected = true;
-          // Insert after the placeholder option
           select.insertBefore(opt, select.options[1]);
+          select.value = detected;
         }
-        showToast(`📍 City auto-detected: ${matched ? matched.value : detected}`);
+        placeholder.textContent = origText;
+        showToast(`📍 City detected: ${matched ? matched.value : detected}`);
       } catch (_) {
-        // Silently fail — geolocation worked but reverse geocoding failed
+        placeholder.textContent = origText;
       }
     },
-    () => {
-      // Permission denied or unavailable — do nothing, user can pick manually
-    },
-    { timeout: 8000, maximumAge: 300000 }
+    () => { placeholder.textContent = origText; },
+    { timeout: 10000, maximumAge: 300000 }
   );
 }
 
