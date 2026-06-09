@@ -1078,6 +1078,14 @@
   <div class="results-wrap" id="results-wrap">
     <!-- Filled by JS -->
   </div>
+
+  <!-- DEBUG PANEL -->
+  <div id="debug-panel" style="display:none; max-width:520px; margin:1rem auto; padding:0 1rem;">
+    <details open>
+      <summary style="font-size:13px; font-weight:600; cursor:pointer; color:var(--muted); margin-bottom:0.5rem;">🔍 Debug: Raw API response</summary>
+      <pre style="background:#1a1a2e; color:#a0e0ff; font-size:11px; padding:1rem; border-radius:8px; overflow-x:auto; white-space:pre-wrap; word-break:break-all;"></pre>
+    </details>
+  </div>
 </div>
 
 <!-- LEADERBOARD PAGE -->
@@ -1338,6 +1346,8 @@ async function analyzeImage() {
   document.getElementById('analyze-btn').disabled = true;
   document.getElementById('results-wrap').classList.remove('active');
   document.getElementById('loading-state').classList.add('active');
+  const dbgPanel = document.getElementById('debug-panel');
+  if (dbgPanel) dbgPanel.style.display = 'none';
 
   // Animate loading steps
   const steps = ['step-1', 'step-2', 'step-3', 'step-4'];
@@ -1363,14 +1373,29 @@ async function analyzeImage() {
       })
     });
 
-    const result = await response.json();
+    const rawText = await response.text();
     clearInterval(stepInterval);
     steps.forEach(s => { document.getElementById(s).classList.add('done'); document.getElementById(s).classList.remove('active'); });
+    document.getElementById('loading-state').classList.remove('active');
+
+    // Debug panel — always show raw response
+    const dbg = document.getElementById('debug-panel');
+    if (dbg) {
+      dbg.style.display = 'block';
+      dbg.querySelector('pre').textContent = `HTTP ${response.status}\n\n${rawText}`;
+    }
+
+    let result;
+    try { result = JSON.parse(rawText); }
+    catch(_) {
+      showToast('⚠️ API returned invalid data. See debug panel below.');
+      document.getElementById('analyze-btn').disabled = false;
+      return;
+    }
 
     if (!response.ok || result.error) {
       const msg = result.error || 'Something went wrong. Please try again.';
       showToast('⚠️ ' + msg);
-      document.getElementById('loading-state').classList.remove('active');
       document.getElementById('analyze-btn').disabled = false;
       return;
     }
