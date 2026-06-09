@@ -183,6 +183,101 @@
     width: 100%;
     height: 100%;
   }
+  .btn-camera {
+    display: block;
+    width: 100%;
+    padding: 0.85rem;
+    background: var(--phab);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 1rem;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 1.5rem;
+  }
+  .camera-wrap {
+    max-width: 520px;
+    margin: 0 auto 1.5rem;
+    padding: 0 1rem;
+  }
+  .camera-inner {
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #000;
+    aspect-ratio: 4/3;
+  }
+  #camera-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  #camera-canvas { display: none; }
+  .camera-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .camera-rect {
+    width: 75%;
+    height: 55%;
+    border: 3px solid #ef4444;
+    border-radius: 10px;
+    box-shadow: 0 0 0 2000px rgba(0,0,0,0.35);
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .camera-rect.readable {
+    border-color: #22c55e;
+    box-shadow: 0 0 0 2000px rgba(0,0,0,0.25), 0 0 20px rgba(34,197,94,0.6);
+  }
+  .camera-hint {
+    margin-top: 12px;
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    backdrop-filter: blur(4px);
+    transition: background 0.3s;
+  }
+  .camera-hint.readable { background: rgba(34,197,94,0.75); }
+  .camera-controls {
+    position: absolute;
+    bottom: 14px;
+    left: 0; right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+  }
+  .btn-capture {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: #fff;
+    border: 4px solid rgba(255,255,255,0.5);
+    font-size: 28px;
+    cursor: pointer;
+    color: var(--phab);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  }
+  .btn-cam-close {
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+  }
   .upload-icon {
     font-size: 3rem;
     margin-bottom: 1rem;
@@ -935,10 +1030,28 @@
 
   <div style="max-width:520px; margin:0 auto; padding:0 1rem;">
     <div class="upload-zone" id="upload-zone">
-      <input type="file" id="file-input" accept="image/*" capture="environment">
-      <span class="upload-icon">📷</span>
-      <div class="upload-label">Take a photo or upload image</div>
-      <div class="upload-hint">Nutrition label · back of pack · any food</div>
+      <input type="file" id="file-input" accept="image/*">
+      <span class="upload-icon">🖼️</span>
+      <div class="upload-label">Upload an image</div>
+      <div class="upload-hint">Drag & drop or tap to choose from gallery</div>
+    </div>
+    <div style="text-align:center; margin:-1rem 0 1.5rem; color:var(--muted); font-size:13px;">— or —</div>
+    <button class="btn-camera" id="btn-open-camera" onclick="openCamera()">📷 Use Camera</button>
+  </div>
+
+  <!-- Live camera viewfinder -->
+  <div class="camera-wrap" id="camera-wrap" style="display:none;">
+    <div class="camera-inner">
+      <video id="camera-video" autoplay playsinline muted></video>
+      <canvas id="camera-canvas"></canvas>
+      <div class="camera-overlay" id="camera-overlay">
+        <div class="camera-rect" id="camera-rect"></div>
+        <div class="camera-hint" id="camera-hint">Align nutrition label inside the frame</div>
+      </div>
+      <div class="camera-controls">
+        <button class="btn-capture" id="btn-capture" onclick="capturePhoto()">⬤</button>
+        <button class="btn-cam-close" onclick="closeCamera()">✕ Close</button>
+      </div>
     </div>
   </div>
 
@@ -1091,6 +1204,91 @@ function showPage(page) {
   event.target.classList.add('active');
   if (page === 'leaderboard') renderLeaderboard();
   if (page === 'feed') initFeed();
+}
+
+// ===================== CAMERA VIEWFINDER =====================
+let cameraStream = null;
+let cameraRafId = null;
+
+async function openCamera() {
+  const wrap = document.getElementById('camera-wrap');
+  const video = document.getElementById('camera-video');
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 960 } }
+    });
+    video.srcObject = cameraStream;
+    wrap.style.display = 'block';
+    wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    startReadabilityLoop();
+  } catch (err) {
+    alert('Camera access denied. Please allow camera permission and try again.');
+  }
+}
+
+function closeCamera() {
+  if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+  if (cameraRafId) { cancelAnimationFrame(cameraRafId); cameraRafId = null; }
+  document.getElementById('camera-wrap').style.display = 'none';
+}
+
+function startReadabilityLoop() {
+  const video = document.getElementById('camera-video');
+  const canvas = document.getElementById('camera-canvas');
+  const rect = document.getElementById('camera-rect');
+  const hint = document.getElementById('camera-hint');
+  const ctx = canvas.getContext('2d');
+
+  function tick() {
+    if (!cameraStream) return;
+    if (video.readyState < 2) { cameraRafId = requestAnimationFrame(tick); return; }
+
+    const W = video.videoWidth, H = video.videoHeight;
+    canvas.width = W; canvas.height = H;
+    ctx.drawImage(video, 0, 0, W, H);
+
+    // Sample the centre 75%×55% region (matches the rect overlay)
+    const rx = Math.floor(W * 0.125), ry = Math.floor(H * 0.225);
+    const rw = Math.floor(W * 0.75),  rh = Math.floor(H * 0.55);
+    let data;
+    try { data = ctx.getImageData(rx, ry, rw, rh).data; } catch(_) {
+      cameraRafId = requestAnimationFrame(tick); return;
+    }
+
+    // Count bright pixels (label background) and dark pixels (text)
+    let bright = 0, dark = 0, total = data.length / 4;
+    for (let i = 0; i < data.length; i += 4) {
+      const lum = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+      if (lum > 180) bright++;
+      else if (lum < 80) dark++;
+    }
+    const brightRatio = bright / total;
+    const darkRatio   = dark  / total;
+
+    // Readable: mostly bright (white label) with some dark (text), not uniformly flat
+    const isReadable = brightRatio > 0.40 && darkRatio > 0.04 && darkRatio < 0.60;
+
+    rect.classList.toggle('readable', isReadable);
+    hint.classList.toggle('readable', isReadable);
+    hint.textContent = isReadable
+      ? '✓ Label looks readable — tap capture'
+      : 'Align nutrition label · ensure good lighting';
+
+    cameraRafId = requestAnimationFrame(tick);
+  }
+  cameraRafId = requestAnimationFrame(tick);
+}
+
+function capturePhoto() {
+  const video = document.getElementById('camera-video');
+  const canvas = document.getElementById('camera-canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  canvas.toBlob(blob => {
+    closeCamera();
+    handleFile(new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' }));
+  }, 'image/jpeg', 0.92);
 }
 
 // ===================== FILE UPLOAD =====================
