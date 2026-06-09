@@ -10,26 +10,26 @@
   :root {
     --bg:          #F0FAFB;
     --surface:     #ffffff;
-    --surface2:    #E3F5F7;
-    --border:      #C2E8EC;
-    --text:        #1A2E30;
-    --muted:       #5A8A8E;
+    --surface2:    #E6F7F9;
+    --border:      #C8ECF0;
+    --text:        #0D1F22;
+    --muted:       #5A7A80;
     --phab:        #00B4C8;
-    --phab-dark:   #007F8F;
+    --phab-dark:   #009AAC;
     --phab-light:  #E0F7FA;
     --obsidian:    #00B4C8;
-    --graphite:    #1A2E30;
+    --graphite:    #0D1F22;
     --brown:       #5C3317;
     --brown-light: #F9EFE7;
-    --green:       #1a7a4a;
-    --green-light: #e8f5ee;
-    --yellow:      #d4820a;
-    --yellow-light:#fff8e6;
-    --red:         #c0392b;
-    --red-light:   #fdecea;
-    --score-great: #1a7a4a;
-    --score-ok:    #d4820a;
-    --score-bad:   #c0392b;
+    --green:       #16a34a;
+    --green-light: #dcfce7;
+    --yellow:      #d97706;
+    --yellow-light:#fef3c7;
+    --red:         #dc2626;
+    --red-light:   #fee2e2;
+    --score-great: #22C55E;
+    --score-ok:    #F59E0B;
+    --score-bad:   #EF4444;
     --radius:      16px;
     --radius-sm:   10px;
   }
@@ -47,8 +47,8 @@
 
   /* NAV */
   nav {
-    background: var(--phab);
-    border-bottom: none;
+    background: #fff;
+    border-bottom: 1.5px solid var(--border);
     padding: 0 1.5rem;
     height: 56px;
     display: flex;
@@ -62,10 +62,10 @@
     font-family: 'Space Grotesk', sans-serif;
     font-weight: 700;
     font-size: 20px;
-    color: #fff;
+    color: var(--text);
     letter-spacing: -0.5px;
   }
-  .nav-logo span { color: rgba(255,255,255,0.7); font-weight: 400; font-size: 13px; margin-left: 6px; letter-spacing: 0; }
+  .nav-logo span { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 6px; letter-spacing: 0; }
   .nav-right {
     display: flex;
     gap: 0.5rem;
@@ -75,7 +75,7 @@
     font-size: 13px;
     font-family: 'DM Sans', sans-serif;
     font-weight: 600;
-    color: rgba(255,255,255,0.75);
+    color: var(--muted);
     cursor: pointer;
     padding: 0.35rem 0.85rem;
     border-radius: 20px;
@@ -85,8 +85,8 @@
   }
   .nav-tab.active, .nav-tab:hover {
     color: var(--phab);
-    background: #fff;
-    border-color: #fff;
+    background: var(--phab-light);
+    border-color: var(--phab);
   }
 
   /* PAGES */
@@ -95,32 +95,15 @@
 
   /* HERO */
   .hero {
-    background: linear-gradient(160deg, #00B4C8 0%, #009BAD 100%);
+    background: var(--bg);
+    border-bottom: 1.5px solid var(--border);
     padding: 3.5rem 1.5rem 3rem;
     text-align: center;
     position: relative;
     overflow: hidden;
   }
-  .hero::before {
-    content: '';
-    position: absolute;
-    top: -60px; right: -60px;
-    width: 260px; height: 260px;
-    background: #fff;
-    border-radius: 50%;
-    opacity: 0.06;
-    pointer-events: none;
-  }
-  .hero::after {
-    content: '';
-    position: absolute;
-    bottom: -80px; left: -40px;
-    width: 220px; height: 220px;
-    background: #fff;
-    border-radius: 50%;
-    opacity: 0.05;
-    pointer-events: none;
-  }
+  .hero::before { display: none; }
+  .hero::after { display: none; }
   .hero-inner { max-width: 600px; margin: 0 auto; position: relative; z-index: 1; }
   .hero-eyebrow {
     display: inline-block;
@@ -129,8 +112,9 @@
     font-weight: 700;
     letter-spacing: 2.5px;
     text-transform: uppercase;
-    color: rgba(255,255,255,0.85);
-    background: rgba(255,255,255,0.15);
+    color: var(--phab);
+    background: var(--phab-light);
+    border: 1px solid rgba(255,91,31,0.2);
     padding: 0.3rem 0.9rem;
     border-radius: 20px;
     margin-bottom: 1.25rem;
@@ -142,37 +126,55 @@
     line-height: 1.05;
     margin-bottom: 1rem;
     letter-spacing: -1.5px;
-    color: #fff;
+    color: var(--text);
   }
   .hero h1 em {
-    color: #fff;
+    color: #00B4C8;
     font-style: italic;
-    opacity: 0.9;
   }
   .hero-sub {
-    color: rgba(255,255,255,0.8);
+    color: var(--muted);
     font-size: 15px;
     max-width: 440px;
-    margin: 0 auto 2rem;
+    margin: 0 auto 1.5rem;
     font-weight: 400;
     line-height: 1.7;
+  }
+  .hero-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-bottom: 2rem;
+  }
+  .hero-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 0.4rem 0.9rem;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
   }
 
   /* UPLOAD ZONE */
   .upload-zone {
     max-width: 520px;
     margin: 0 auto 2rem;
-    border: 2px dashed var(--border);
+    border: 2px dashed var(--phab);
     border-radius: var(--radius);
     padding: 2.5rem 1.5rem;
     text-align: center;
     cursor: pointer;
     transition: all 0.25s;
-    background: var(--surface);
+    background: var(--bg);
     position: relative;
   }
   .upload-zone:hover, .upload-zone.dragover {
-    border-color: var(--phab);
+    border-color: var(--phab-dark);
     background: var(--phab-light);
   }
   .upload-zone input[type=file] {
@@ -193,10 +195,12 @@
     border-radius: var(--radius);
     font-size: 1rem;
     font-family: inherit;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     margin-bottom: 1.5rem;
+    transition: background 0.2s;
   }
+  .btn-camera:hover { background: var(--phab-dark); }
   .camera-wrap {
     max-width: 520px;
     margin: 0 auto 1.5rem;
@@ -228,9 +232,9 @@
   .camera-rect {
     width: 75%;
     height: 55%;
-    border: 3px solid #ef4444;
-    border-radius: 10px;
-    box-shadow: 0 0 0 2000px rgba(0,0,0,0.35);
+    border: 3px solid rgba(255,255,255,0.8);
+    border-radius: 12px;
+    box-shadow: 0 0 0 2000px rgba(0,0,0,0.45);
     transition: border-color 0.3s, box-shadow 0.3s;
   }
   .camera-rect.readable {
@@ -239,15 +243,16 @@
   }
   .camera-hint {
     margin-top: 12px;
-    background: rgba(0,0,0,0.55);
+    background: rgba(0,0,0,0.65);
     color: #fff;
     font-size: 12px;
-    padding: 4px 12px;
+    padding: 5px 14px;
     border-radius: 20px;
     backdrop-filter: blur(4px);
     transition: background 0.3s;
+    letter-spacing: 0.3px;
   }
-  .camera-hint.readable { background: rgba(34,197,94,0.75); }
+  .camera-hint.readable { background: rgba(34,197,94,0.85); }
   .camera-controls {
     position: absolute;
     bottom: 14px;
@@ -321,19 +326,21 @@
   /* ANALYZE BTN */
   .btn-analyze {
     display: block;
+    width: 100%;
+    max-width: 520px;
     margin: 0 auto;
     background: var(--phab);
     color: #fff;
     border: none;
     padding: 0.9rem 2.5rem;
-    border-radius: 100px;
+    border-radius: var(--radius);
     font-family: 'DM Sans', sans-serif;
     font-size: 16px;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
     letter-spacing: 0.2px;
-    box-shadow: 0 4px 16px rgba(0,180,200,0.35);
+    box-shadow: 0 4px 16px rgba(255,91,31,0.3);
   }
   .btn-analyze:hover { background: var(--phab-dark); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,180,200,0.4); }
   .btn-analyze:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; box-shadow: none; }
@@ -367,6 +374,7 @@
   }
   .loading-step.done { color: var(--green); }
   .loading-step.active { color: var(--phab); font-weight: 700; }
+  .loading-spinner { border-top-color: var(--phab); }
 
   /* IMAGE PREVIEW */
   .img-preview {
@@ -550,7 +558,7 @@
 
   /* PHAB COMPARISON */
   .phab-cta {
-    background: linear-gradient(135deg, #00B4C8 0%, #007F8F 100%);
+    background: linear-gradient(135deg, #00B4C8 0%, #009AAC 100%);
     border-radius: var(--radius);
     padding: 1.5rem;
     color: white;
@@ -574,7 +582,7 @@
   .phab-cta-head {
     font-size: 12px;
     font-family: 'Space Mono', monospace;
-    color: var(--phab);
+    color: rgba(255,255,255,0.7);
     text-transform: uppercase;
     letter-spacing: 0.1em;
     margin-bottom: 0.5rem;
@@ -934,20 +942,20 @@
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    background: rgba(255,255,255,0.2);
-    border: 1px solid rgba(255,255,255,0.35);
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 20px;
     padding: 0.3rem 0.75rem;
     font-size: 11px;
     font-family: 'DM Sans', sans-serif;
     font-weight: 600;
     letter-spacing: 0.3px;
-    color: #fff;
+    color: var(--muted);
     margin-bottom: 1.5rem;
   }
   .scan-badge .dot {
     width: 6px; height: 6px;
-    background: #fff;
+    background: var(--phab);
     border-radius: 50%;
     animation: pulse 2s infinite;
   }
@@ -1061,8 +1069,13 @@
   <div class="hero">
     <div class="hero-inner">
       <div class="hero-eyebrow">Powered by phab × AI</div>
-      <h1>What is your food<br><em>actually</em> doing to you?</h1>
-      <p class="hero-sub">Scan any nutrition label. Get a science-backed NutriIQ score. See how your city eats.</p>
+      <h1>What's your snack <em>really</em> doing to you?</h1>
+      <p class="hero-sub">Scan any label. Get your NutriIQ score in 10 seconds.</p>
+      <div class="hero-pills">
+        <span class="hero-pill">💪 Protein Quality</span>
+        <span class="hero-pill">🩸 Sugar Risk</span>
+        <span class="hero-pill">🌿 Ingredient Cleanliness</span>
+      </div>
       <div class="scan-badge">
         <span class="dot"></span>
         <span id="scan-count">Be the first to scan today</span>
@@ -1071,26 +1084,24 @@
   </div>
 
   <div style="max-width:520px; margin:0 auto 1rem; padding:0 1rem;">
-    <div class="city-select-wrap">
-      <select id="city-select">
-        <option value="">📍 Select your city</option>
-        <option>Mumbai</option>
-        <option>Delhi</option>
-        <option>Bengaluru</option>
-        <option>Hyderabad</option>
-        <option>Chennai</option>
-        <option>Pune</option>
-        <option>Ahmedabad</option>
-        <option>Kolkata</option>
-        <option>Jaipur</option>
-        <option>Lucknow</option>
-        <option>Chandigarh</option>
-        <option>Surat</option>
-        <option>Indore</option>
-        <option>Nagpur</option>
-        <option>Other</option>
-      </select>
+    <div id="city-auto-badge" style="display:none; align-items:center; gap:10px; background:var(--surface); border:1.5px solid var(--phab); border-radius:10px; padding:10px 14px;">
+      <span style="font-size:18px;">📍</span>
+      <div style="flex:1;">
+        <div style="font-size:13px; color:var(--muted);">Your city (auto-detected)</div>
+        <div id="city-detected-name" style="font-weight:700; color:var(--text); font-size:15px;"></div>
+      </div>
+      <button onclick="showCityInput()" style="font-size:12px; color:var(--phab); background:none; border:none; cursor:pointer; text-decoration:underline;">Change</button>
     </div>
+    <div id="city-detecting-badge" style="display:none; align-items:center; gap:10px; background:var(--surface); border:1.5px solid var(--border); border-radius:10px; padding:10px 14px; color:var(--muted); font-size:13px;">
+      <span>📡 Detecting your city…</span>
+    </div>
+    <div id="city-manual-wrap" style="display:none;">
+      <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--text);">Your city <span style="font-weight:400; color:var(--muted);">(for the leaderboard)</span></label>
+      <input type="text" id="city-manual-input" placeholder="e.g. Mumbai, Dubai, London…"
+        style="width:100%; box-sizing:border-box; padding:10px 14px; border:1.5px solid var(--phab); border-radius:10px; font-size:14px; font-family:inherit; background:var(--surface); color:var(--text); outline:none;">
+    </div>
+    <!-- Hidden field stores the final city value used at scan time -->
+    <input type="hidden" id="city-value" value="">
   </div>
 
   <div style="max-width:520px; margin:0 auto; padding:0 1rem;">
@@ -1101,7 +1112,7 @@
       <div class="upload-hint">Drag & drop or tap to choose from gallery</div>
     </div>
     <div style="text-align:center; margin:-1rem 0 1.5rem; color:var(--muted); font-size:13px;">— or —</div>
-    <button class="btn-camera" id="btn-open-camera" onclick="openCamera()">📷 Use Camera</button>
+    <button class="btn-camera" id="btn-open-camera" onclick="openCamera()">⊡ Scan with Camera</button>
   </div>
 
   <!-- Live camera viewfinder -->
@@ -1111,7 +1122,7 @@
       <canvas id="camera-canvas"></canvas>
       <div class="camera-overlay" id="camera-overlay">
         <div class="camera-rect" id="camera-rect"></div>
-        <div class="camera-hint" id="camera-hint">Align nutrition label inside the frame</div>
+        <div class="camera-hint" id="camera-hint">Scanning label… align inside frame</div>
       </div>
       <div class="camera-controls">
         <button class="btn-capture" id="btn-capture" onclick="capturePhoto()">⬤</button>
@@ -1449,7 +1460,7 @@ function handleFile(file) {
 async function analyzeImage() {
   if (!uploadedImageBase64) return;
 
-  const city = document.getElementById('city-select').value || 'Unspecified';
+  const city = document.getElementById('city-value').value.trim() || null;
 
   document.getElementById('analyze-btn').disabled = true;
   document.getElementById('results-wrap').classList.remove('active');
@@ -1543,7 +1554,7 @@ function showResults(data, city, notLabel) {
   const s = data;
   const score = Math.round(s.nutri_iq_score);
   const colorClass = s.score_color === 'great' ? 'score-great' : s.score_color === 'ok' ? 'score-ok' : 'score-bad';
-  const strokeColor = s.score_color === 'great' ? '#1a7a4a' : s.score_color === 'ok' ? '#d4820a' : '#c0392b';
+  const strokeColor = s.score_color === 'great' ? '#22C55E' : s.score_color === 'ok' ? '#F59E0B' : '#EF4444';
   const circumference = 2 * Math.PI * 54;
   const dash = circumference - (score / 100) * circumference;
 
@@ -1577,8 +1588,8 @@ function showResults(data, city, notLabel) {
     </div>
 
     <div class="nutrient-grid">
-      ${nutriCard('Protein', p.protein_g + 'g', p.protein_g / 0.5, '#1a7a4a', 'per 100g · ' + s.protein_per_100kcal.toFixed(1) + 'g per 100kcal')}
-      ${nutriCard('Sugar', p.sugar_g + 'g', Math.min(p.sugar_g / 30 * 100, 100), p.sugar_g > 15 ? '#c0392b' : p.sugar_g > 5 ? '#d4820a' : '#1a7a4a', 'per 100g · ' + (p.sugar_g > 15 ? 'high' : p.sugar_g > 5 ? 'moderate' : 'low'))}
+      ${nutriCard('Protein', p.protein_g + 'g', p.protein_g / 0.5, '#22C55E', 'per 100g · ' + s.protein_per_100kcal.toFixed(1) + 'g per 100kcal')}
+      ${nutriCard('Sugar', p.sugar_g + 'g', Math.min(p.sugar_g / 30 * 100, 100), p.sugar_g > 15 ? '#EF4444' : p.sugar_g > 5 ? '#F59E0B' : '#22C55E', 'per 100g · ' + (p.sugar_g > 15 ? 'high' : p.sugar_g > 5 ? 'moderate' : 'low'))}
       ${nutriCard('Calories', p.calories + ' kcal', Math.min(p.calories / 6, 100), '#4eaaff', 'per 100g')}
       ${nutriCard('Fibre', p.fibre_g + 'g', p.fibre_g / 10 * 100, '#b87fff', 'per 100g · ' + (p.fibre_g >= 5 ? 'good' : p.fibre_g >= 2 ? 'moderate' : 'low'))}
     </div>
@@ -1716,51 +1727,53 @@ function shareResult() {
 }
 
 // ===================== AUTO-DETECT CITY =====================
-async function autoDetectCity() {
-  if (!navigator.geolocation) return;
-  const select = document.getElementById('city-select');
-  if (!select) return;
+function setCity(city) {
+  document.getElementById('city-value').value = city;
+  document.getElementById('city-detecting-badge').style.display = 'none';
+  document.getElementById('city-manual-wrap').style.display = 'none';
+  const badge = document.getElementById('city-auto-badge');
+  badge.style.display = 'flex';
+  document.getElementById('city-detected-name').textContent = city;
+}
 
-  // Show detecting state
-  const placeholder = select.options[0];
-  const origText = placeholder.textContent;
-  placeholder.textContent = '📡 Detecting city…';
+function showCityInput() {
+  document.getElementById('city-auto-badge').style.display = 'none';
+  document.getElementById('city-manual-wrap').style.display = 'block';
+  const input = document.getElementById('city-manual-input');
+  input.value = document.getElementById('city-value').value;
+  input.focus();
+  input.oninput = () => { document.getElementById('city-value').value = input.value.trim(); };
+}
+
+async function autoDetectCity() {
+  if (!navigator.geolocation) {
+    document.getElementById('city-manual-wrap').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('city-detecting-badge').style.display = 'flex';
 
   navigator.geolocation.getCurrentPosition(
     async (pos) => {
       try {
         const { latitude, longitude } = pos.coords;
         const res = await fetch(`/api/geocode?lat=${latitude}&lon=${longitude}`);
-        if (!res.ok) { placeholder.textContent = origText; return; }
+        if (!res.ok) throw new Error('geocode failed');
         const data = await res.json();
         const detected = data.city || '';
-        if (!detected) { placeholder.textContent = origText; return; }
-
-        // Try to match existing option (case-insensitive)
-        const options = Array.from(select.options);
-        const matched = options.find(o =>
-          o.value && (
-            o.value.toLowerCase() === detected.toLowerCase() ||
-            detected.toLowerCase().includes(o.value.toLowerCase())
-          )
-        );
-        if (matched) {
-          select.value = matched.value;
-        } else {
-          const opt = document.createElement('option');
-          opt.value = detected;
-          opt.textContent = `📍 ${detected}`;
-          opt.selected = true;
-          select.insertBefore(opt, select.options[1]);
-          select.value = detected;
-        }
-        placeholder.textContent = origText;
-        showToast(`📍 City detected: ${matched ? matched.value : detected}`);
+        if (!detected) throw new Error('no city');
+        setCity(detected);
+        showToast(`📍 City detected: ${detected}`);
       } catch (_) {
-        placeholder.textContent = origText;
+        document.getElementById('city-detecting-badge').style.display = 'none';
+        document.getElementById('city-manual-wrap').style.display = 'block';
       }
     },
-    () => { placeholder.textContent = origText; },
+    () => {
+      // Permission denied — show manual input
+      document.getElementById('city-detecting-badge').style.display = 'none';
+      document.getElementById('city-manual-wrap').style.display = 'block';
+    },
     { timeout: 10000, maximumAge: 300000 }
   );
 }
