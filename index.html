@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -530,10 +530,107 @@
   .share-btn.primary:hover { background: var(--phab-dark); }
 
   /* LEADERBOARD PAGE */
-  .leaderboard-wrap {
-    max-width: 680px;
+  .leaderboard-wrap, .feed-wrap {
+    max-width: 780px;
     margin: 0 auto;
     padding: 2rem 1.5rem;
+  }
+
+  /* FEED */
+  .feed-stats {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .feed-stat {
+    flex: 1;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    text-align: center;
+  }
+  .feed-stat span {
+    display: block;
+    font-size: 1.6rem;
+    font-weight: 700;
+    font-family: 'Space Mono', monospace;
+    color: var(--phab);
+  }
+  .feed-stat small { font-size: 12px; color: var(--muted); }
+  .feed-loading { text-align: center; padding: 3rem; color: var(--muted); font-size: 14px; }
+  .feed-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    font-size: 13.5px;
+  }
+  .feed-table thead th {
+    background: var(--surface2);
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    border-bottom: 1.5px solid var(--border);
+  }
+  .feed-table tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .feed-table tbody tr:last-child { border-bottom: none; }
+  .feed-table tbody tr:hover { background: var(--surface2); }
+  .feed-table td { padding: 0.75rem 1rem; vertical-align: middle; }
+  .feed-score-pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+  }
+  .feed-score-pill.great { background: var(--green-light); color: var(--green); }
+  .feed-score-pill.ok    { background: var(--yellow-light); color: var(--yellow); }
+  .feed-score-pill.bad   { background: var(--red-light); color: var(--red); }
+  .feed-tier {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+  .feed-city-badge {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .feed-refresh {
+    margin-top: 1rem;
+    text-align: right;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .feed-refresh button {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--muted);
+  }
+  .feed-refresh button:hover { background: var(--surface2); }
+  .feed-new-row { animation: feedPop 0.4s ease; }
+  @keyframes feedPop {
+    from { background: var(--phab-light); }
+    to   { background: transparent; }
   }
   .lb-header {
     margin-bottom: 2rem;
@@ -759,6 +856,7 @@
   <div class="nav-logo">Nutri<span>IQ</span></div>
   <div class="nav-right">
     <button class="nav-tab active" onclick="showPage('scan')">📸 Scan</button>
+    <button class="nav-tab" onclick="showPage('feed')">📡 Live Feed</button>
     <button class="nav-tab" onclick="showPage('leaderboard')">🏆 Cities</button>
     <button class="nav-tab" onclick="showPage('about')">📐 Index</button>
   </div>
@@ -857,6 +955,24 @@
   </div>
 </div>
 
+<!-- LIVE FEED PAGE -->
+<div class="page" id="page-feed">
+  <div class="feed-wrap">
+    <div class="lb-header">
+      <h2>📡 Live Scan Feed</h2>
+      <p>Real scans, real scores — updated every 30 seconds.</p>
+    </div>
+    <div class="feed-stats" id="feed-stats">
+      <div class="feed-stat"><span id="feed-total">—</span><small>total scans</small></div>
+      <div class="feed-stat"><span id="feed-avg">—</span><small>avg NutriIQ</small></div>
+      <div class="feed-stat"><span id="feed-today">—</span><small>today</small></div>
+    </div>
+    <div id="feed-content">
+      <div class="feed-loading">Loading feed…</div>
+    </div>
+  </div>
+</div>
+
 <!-- ABOUT PAGE -->
 <div class="page" id="page-about">
   <div class="about-wrap">
@@ -924,6 +1040,14 @@
 </div>
 
 <script>
+// Supabase public config — loaded from /api/config on first feed open
+window.SUPABASE_URL = '';
+window.SUPABASE_ANON_KEY = '';
+fetch('/api/config').then(r => r.json()).then(d => {
+  window.SUPABASE_URL = d.supabaseUrl || '';
+  window.SUPABASE_ANON_KEY = d.supabaseAnonKey || '';
+}).catch(() => {});
+
 // ===================== STATE =====================
 let uploadedImageBase64 = null;
 let uploadedImageType = null;
@@ -976,6 +1100,7 @@ function showPage(page) {
   document.getElementById('page-' + page).classList.add('active');
   event.target.classList.add('active');
   if (page === 'leaderboard') renderLeaderboard();
+  if (page === 'feed') initFeed();
 }
 
 // ===================== FILE UPLOAD =====================
@@ -1314,6 +1439,114 @@ function showToast(msg) {
 
 // Init leaderboard
 renderLeaderboard();
+
+// ===================== LIVE FEED =====================
+let feedInterval = null;
+let feedInitialized = false;
+let lastFeedIds = new Set();
+
+function getTierColor(score) {
+  if (score >= 75) return 'great';
+  if (score >= 50) return 'ok';
+  return 'bad';
+}
+
+function timeAgo(iso) {
+  const diff = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
+
+async function fetchFeed() {
+  const SUPABASE_URL = window.SUPABASE_URL || '';
+  const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '';
+
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    document.getElementById('feed-content').innerHTML = `
+      <div style="text-align:center; padding:3rem; color:var(--muted); font-size:14px;">
+        <div style="font-size:2rem; margin-bottom:1rem;">🔌</div>
+        <strong>Supabase not connected</strong><br>
+        Add <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> as env vars in Vercel.
+      </div>`;
+    return;
+  }
+
+  try {
+    // Fetch recent 50 scans
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/scans?select=id,created_at,city,product_name,nutri_iq_score,tier_label,protein_per_100kcal,sugar_per_100g,has_artificial_additives&order=created_at.desc&limit=50`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      }
+    });
+
+    if (!res.ok) throw new Error('Fetch failed');
+    const rows = await res.json();
+
+    // Stats
+    const total = rows.length;
+    const avg = total ? Math.round(rows.reduce((s, r) => s + (r.nutri_iq_score || 0), 0) / total) : '—';
+    const today = rows.filter(r => new Date(r.created_at).toDateString() === new Date().toDateString()).length;
+
+    document.getElementById('feed-total').textContent = total.toLocaleString();
+    document.getElementById('feed-avg').textContent = avg;
+    document.getElementById('feed-today').textContent = today;
+
+    // Detect new rows for animation
+    const newIds = new Set(rows.map(r => r.id));
+
+    const tableRows = rows.map(r => {
+      const isNew = !lastFeedIds.has(r.id) && feedInitialized;
+      const scoreColor = getTierColor(r.nutri_iq_score);
+      const tier = (r.tier_label || '').replace(/_/g, ' ');
+      return `<tr class="${isNew ? 'feed-new-row' : ''}">
+        <td style="color:var(--muted); font-family:'Space Mono',monospace; font-size:12px;">${timeAgo(r.created_at)}</td>
+        <td><strong>${r.product_name || '—'}</strong></td>
+        <td>${r.city ? `<span class="feed-city-badge">📍 ${r.city}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
+        <td><span class="feed-score-pill ${scoreColor}">${r.nutri_iq_score ?? '—'}</span></td>
+        <td class="feed-tier">${tier}</td>
+        <td style="font-size:12px; color:var(--muted);">${r.protein_per_100kcal != null ? r.protein_per_100kcal.toFixed(1) + 'g/100kcal' : '—'}</td>
+        <td style="font-size:12px; text-align:center;">${r.has_artificial_additives ? '⚠️' : '✅'}</td>
+      </tr>`;
+    }).join('');
+
+    document.getElementById('feed-content').innerHTML = `
+      <table class="feed-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Product</th>
+            <th>City</th>
+            <th>Score</th>
+            <th>Tier</th>
+            <th>Protein Eff.</th>
+            <th>Additives</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+      <div class="feed-refresh">
+        Auto-refreshes every 30s &nbsp;·&nbsp;
+        <button onclick="fetchFeed()">↻ Refresh now</button>
+      </div>`;
+
+    lastFeedIds = newIds;
+    feedInitialized = true;
+
+  } catch (err) {
+    console.error('Feed error:', err);
+    document.getElementById('feed-content').innerHTML = `<div class="feed-loading">Could not load feed. ${err.message}</div>`;
+  }
+}
+
+function initFeed() {
+  fetchFeed();
+  if (!feedInterval) {
+    feedInterval = setInterval(fetchFeed, 30000);
+  }
+}
 </script>
 </body>
 </html>
