@@ -37,6 +37,10 @@ Always return valid JSON only — no markdown, no backticks, no preamble.`;
 
   const USER_PROMPT = `Analyse this nutrition label image and return ONLY a valid JSON object.
 
+IMPORTANT: The label may be rotated, sideways, upside-down, or at an angle — rotate it mentally and read it anyway. Do not refuse due to orientation.
+If the label is partially visible, estimate missing values from what is visible.
+Only set "not_a_food_label": true if the image contains NO food packaging whatsoever.
+
 Required shape:
 {
   "product_name": "string (product name if visible, else 'Unknown product')",
@@ -108,7 +112,14 @@ Required shape:
     const data = await response.json();
     const text = data.content.map(i => i.text || '').join('');
     const clean = text.replace(/```json|```/g, '').trim();
-    const result = JSON.parse(clean);
+
+    let result;
+    try {
+      result = JSON.parse(clean);
+    } catch (_) {
+      console.error('JSON parse failed. Raw response:', text);
+      return res.status(422).json({ error: 'Could not parse nutrition data. The label may be too blurry or obscured — try a flatter, better-lit photo.' });
+    }
 
     // Persist scan to Supabase asynchronously (non-blocking)
     if (process.env.SUPABASE_URL && !result.not_a_food_label) {
