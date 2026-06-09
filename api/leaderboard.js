@@ -1,25 +1,9 @@
-// api/leaderboard.js
-// Returns rolling 7-day city leaderboard from Supabase
-// Cached at edge for 15 minutes to avoid DB hammering
+const CACHE_SECONDS = 900;
 
-export const config = { runtime: 'edge' };
+export default async function handler(req, res) {
+  const mode = req.query?.mode || 'overall';
 
-const CACHE_SECONDS = 900; // 15 minutes
-
-export default async function handler(req) {
-  const url = new URL(req.url);
-  const mode = url.searchParams.get('mode') || 'overall'; // overall | protein | sugar
-
-  const cacheKey = `leaderboard:${mode}`;
-
-  // Build query based on mode
-  const metricMap = {
-    overall: { col: 'nutri_iq_score', label: 'NutriIQ' },
-    protein: { col: 'protein_per_100kcal', label: 'Protein' },
-    sugar:   { col: 'sugar_per_100g',      label: 'Sugar Avoidance', invert: true }
-  };
-
-  const metric = metricMap[mode] || metricMap.overall;
+  res.setHeader('Cache-Control', `public, s-maxage=${CACHE_SECONDS}, stale-while-revalidate=60`);
 
   try {
     const { createClient } = await import('@supabase/supabase-js');
@@ -28,7 +12,6 @@ export default async function handler(req) {
       process.env.SUPABASE_SERVICE_KEY
     );
 
-    // Raw SQL via rpc for the aggregation
     const { data, error } = await supabase.rpc('get_leaderboard', {
       p_mode: mode,
       p_min_scans: 10
@@ -36,19 +19,10 @@ export default async function handler(req) {
 
     if (error) throw error;
 
-    return new Response(JSON.stringify({ ok: true, mode, data }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': `public, s-maxage=${CACHE_SECONDS}, stale-while-revalidate=60`
-      }
-    });
+    return res.status(200).json({ ok: true, mode, data });
 
   } catch (err) {
     console.error('Leaderboard error:', err);
-    return new Response(JSON.stringify({ ok: false, error: err.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(500).json({ ok: false, error: err.message });
   }
 }
