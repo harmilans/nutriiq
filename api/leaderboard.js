@@ -54,10 +54,14 @@ export default async function handler(req, res) {
       else if (mode === 'sugar') avg_score = Math.round((100 - avg(c.sugars)) * 10) / 10;
       else avg_score = Math.round(avg(c.scores) * 10) / 10;
 
+      const scan_count = mode === 'protein' ? c.proteins.length
+        : mode === 'sugar' ? c.sugars.length
+        : c.scores.length;
+
       return {
         city: c.city,
         avg_score,
-        scan_count: c.scores.length || c.proteins.length || c.sugars.length,
+        scan_count,
         trend_7d: 0
       };
     });
