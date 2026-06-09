@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { imageBase64, imageType, city } = req.body;
+  const { imageBase64, imageType, city, productName } = req.body;
 
   if (!imageBase64 || !imageType) {
     return res.status(400).json({ error: 'imageBase64 and imageType are required' });
@@ -38,6 +38,7 @@ Always return valid JSON only — no markdown, no backticks, no preamble.`;
   const USER_PROMPT = `Analyse this nutrition label image and return ONLY a valid JSON object.
 
 IMPORTANT: The label may be rotated, sideways, upside-down, or at an angle — rotate it mentally and read it anyway. Do not refuse due to orientation.
+${productName ? `The user has identified this product as: "${productName}". Use this as the product_name and as context when reading the label.` : ''}
 If the label is partially visible, estimate missing values from what is visible.
 Only set "not_a_food_label": true if the image contains NO food packaging whatsoever.
 
