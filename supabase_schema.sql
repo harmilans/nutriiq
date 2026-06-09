@@ -159,7 +159,6 @@ select
   max(created_at)::date                                as last_seen
 from scans
 where product_name is not null
-  and not_a_food_label is not true
 group by lower(trim(product_name))
 having count(*) >= 3
 order by scan_count desc;
