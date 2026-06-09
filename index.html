@@ -3,31 +3,33 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NutriIQ — What's Really In Your Food?</title>
+<title>NutriIQ by phab — What's Really In Your Food?</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 
   :root {
-    --bg: #f7f3ee;
-    --surface: #ffffff;
-    --surface2: #f0ebe4;
-    --border: #e0d8ce;
-    --text: #1a1208;
-    --muted: #8a7e6e;
-    --phab: #e8541a;
-    --phab-light: #fff0ea;
-    --phab-dark: #b83d10;
-    --green: #1a7a4a;
-    --green-light: #e8f5ee;
-    --yellow: #d4820a;
-    --yellow-light: #fff8e6;
-    --red: #c0392b;
-    --red-light: #fdecea;
-    --score-great: #1a7a4a;
-    --score-ok: #d4820a;
-    --score-bad: #c0392b;
-    --radius: 16px;
-    --radius-sm: 8px;
+    --bg:          #F5F4EF;
+    --surface:     #ffffff;
+    --surface2:    #ECEAE3;
+    --border:      #D8D7D2;
+    --text:        #0E0E0E;
+    --muted:       #6B6B6B;
+    --phab:        #C8F04E;
+    --phab-dark:   #3A5A00;
+    --phab-light:  #E8F5C8;
+    --obsidian:    #0E0E0E;
+    --graphite:    #2B2B2B;
+    --green:       #3A5A00;
+    --green-light: #E8F5C8;
+    --yellow:      #7A5300;
+    --yellow-light:#FFF3D6;
+    --red:         #B00020;
+    --red-light:   #FFE8EC;
+    --score-great: #3A5A00;
+    --score-ok:    #7A5300;
+    --score-bad:   #B00020;
+    --radius:      16px;
+    --radius-sm:   8px;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -35,7 +37,7 @@
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'DM Sans', sans-serif;
     min-height: 100vh;
     font-size: 15px;
     line-height: 1.6;
@@ -43,8 +45,8 @@
 
   /* NAV */
   nav {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
+    background: var(--obsidian);
+    border-bottom: none;
     padding: 0 1.5rem;
     height: 56px;
     display: flex;
@@ -55,33 +57,35 @@
     z-index: 100;
   }
   .nav-logo {
-    font-family: 'Space Mono', monospace;
+    font-family: 'Space Grotesk', sans-serif;
     font-weight: 700;
     font-size: 18px;
     color: var(--phab);
-    letter-spacing: -0.03em;
+    letter-spacing: -0.5px;
   }
-  .nav-logo span { color: var(--text); }
+  .nav-logo span { color: rgba(255,255,255,0.5); font-weight: 400; font-size: 13px; margin-left: 6px; letter-spacing: 0; }
   .nav-right {
     display: flex;
-    gap: 0.75rem;
+    gap: 0.5rem;
     align-items: center;
   }
   .nav-tab {
     font-size: 12px;
-    font-family: 'Space Mono', monospace;
-    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    color: rgba(255,255,255,0.45);
     cursor: pointer;
-    padding: 0.35rem 0.75rem;
+    padding: 0.35rem 0.85rem;
     border-radius: 20px;
     border: 1px solid transparent;
     transition: all 0.2s;
     background: none;
   }
   .nav-tab.active, .nav-tab:hover {
-    color: var(--phab);
+    color: var(--obsidian);
+    background: var(--phab);
     border-color: var(--phab);
-    background: var(--phab-light);
   }
 
   /* PAGES */
@@ -90,42 +94,53 @@
 
   /* HERO */
   .hero {
-    max-width: 680px;
-    margin: 0 auto;
-    padding: 3rem 1.5rem 2rem;
+    background: var(--obsidian);
+    padding: 3.5rem 1.5rem 3rem;
     text-align: center;
+    position: relative;
+    overflow: hidden;
   }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; right: -80px;
+    width: 300px; height: 300px;
+    background: var(--phab);
+    border-radius: 50%;
+    opacity: 0.06;
+    pointer-events: none;
+  }
+  .hero-inner { max-width: 640px; margin: 0 auto; position: relative; z-index: 1; }
   .hero-eyebrow {
     display: inline-block;
-    font-family: 'Space Mono', monospace;
+    font-family: 'DM Sans', sans-serif;
     font-size: 10px;
-    letter-spacing: 0.15em;
+    font-weight: 600;
+    letter-spacing: 2.5px;
     text-transform: uppercase;
     color: var(--phab);
-    background: var(--phab-light);
-    border: 1px solid rgba(232,84,26,0.2);
-    padding: 0.3rem 0.8rem;
-    border-radius: 20px;
     margin-bottom: 1.25rem;
   }
   .hero h1 {
-    font-size: clamp(2rem, 6vw, 3.2rem);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(2.2rem, 7vw, 3.8rem);
     font-weight: 700;
-    line-height: 1.1;
-    margin-bottom: 1rem;
-    letter-spacing: -0.03em;
+    line-height: 0.95;
+    margin-bottom: 1.25rem;
+    letter-spacing: -2px;
+    color: #fff;
   }
   .hero h1 em {
     color: var(--phab);
     font-style: normal;
-    position: relative;
   }
   .hero-sub {
-    color: var(--muted);
-    font-size: 16px;
-    max-width: 480px;
+    color: rgba(255,255,255,0.5);
+    font-size: 15px;
+    max-width: 440px;
     margin: 0 auto 2rem;
-    font-weight: 400;
+    font-weight: 300;
+    line-height: 1.7;
   }
 
   /* UPLOAD ZONE */
@@ -198,18 +213,18 @@
     display: block;
     margin: 0 auto;
     background: var(--phab);
-    color: white;
+    color: var(--obsidian);
     border: none;
     padding: 0.9rem 2.5rem;
     border-radius: var(--radius-sm);
     font-family: 'Space Grotesk', sans-serif;
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.3px;
   }
-  .btn-analyze:hover { background: var(--phab-dark); transform: translateY(-1px); }
+  .btn-analyze:hover { background: #d4ff5a; transform: translateY(-1px); }
   .btn-analyze:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
 
   /* LOADING STATE */
@@ -252,105 +267,12 @@
     display: none;
   }
   .img-preview.active { display: block; }
-  .hidden { display: none; }
   .img-preview img {
     width: 100%;
     max-height: 240px;
     object-fit: cover;
     display: block;
   }
-
-  /* CAMERA VIEWFINDER */
-  .camera-wrap {
-    max-width: 520px;
-    margin: 0 auto 1rem;
-    padding: 0 1rem;
-    display: none;
-  }
-  .camera-wrap.active { display: block; }
-  .camera-container {
-    position: relative;
-    width: 100%;
-    border-radius: var(--radius);
-    overflow: hidden;
-    background: #000;
-    aspect-ratio: 4/3;
-  }
-  .camera-video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-  .camera-overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-  }
-  .camera-rect {
-    width: 75%;
-    height: 55%;
-    border: 3px solid rgba(255,255,255,0.5);
-    border-radius: 8px;
-    transition: border-color 0.3s, box-shadow 0.3s;
-    position: relative;
-  }
-  .camera-rect::before, .camera-rect::after,
-  .camera-rect .corner-br, .camera-rect .corner-bl {
-    content: '';
-    position: absolute;
-    width: 20px;
-    height: 20px;
-    border-color: inherit;
-    border-style: solid;
-  }
-  .camera-rect::before { top: -3px; left: -3px; border-width: 3px 0 0 3px; border-radius: 6px 0 0 0; }
-  .camera-rect::after  { top: -3px; right: -3px; border-width: 3px 3px 0 0; border-radius: 0 6px 0 0; }
-  .camera-rect .corner-bl { bottom: -3px; left: -3px; border-width: 0 0 3px 3px; border-radius: 0 0 0 6px; }
-  .camera-rect .corner-br { bottom: -3px; right: -3px; border-width: 0 3px 3px 0; border-radius: 0 0 6px 0; }
-  .camera-rect.detected {
-    border-color: #1a7a4a;
-    box-shadow: 0 0 0 2px rgba(26,122,74,0.4), inset 0 0 30px rgba(26,122,74,0.1);
-  }
-  .camera-rect.not-label {
-    border-color: #c0392b;
-    box-shadow: 0 0 0 2px rgba(192,57,43,0.4);
-  }
-  .camera-hint {
-    position: absolute;
-    bottom: 12px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0,0,0,0.6);
-    color: #fff;
-    font-size: 12px;
-    padding: 4px 12px;
-    border-radius: 20px;
-    white-space: nowrap;
-  }
-  .camera-actions {
-    display: flex;
-    gap: 0.75rem;
-    margin-top: 0.75rem;
-  }
-  .camera-btn {
-    flex: 1;
-    padding: 0.75rem;
-    border-radius: var(--radius-sm);
-    border: 1.5px solid var(--border);
-    background: var(--surface);
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  .camera-btn.primary { background: var(--phab); color: #fff; border-color: var(--phab); }
-  .camera-btn.primary:hover { background: var(--phab-dark); }
-  .camera-btn:hover { background: var(--surface2); }
 
   /* RESULTS CARD */
   .results-wrap {
@@ -614,13 +536,14 @@
     gap: 0.4rem;
     color: var(--text);
   }
-  .share-btn:hover { border-color: var(--phab); color: var(--phab); background: var(--phab-light); }
+  .share-btn:hover { border-color: var(--obsidian); background: var(--obsidian); color: var(--phab); }
   .share-btn.primary {
     background: var(--phab);
     border-color: var(--phab);
-    color: white;
+    color: var(--obsidian);
+    font-weight: 700;
   }
-  .share-btn.primary:hover { background: var(--phab-dark); }
+  .share-btn.primary:hover { background: #d4ff5a; }
 
   /* LEADERBOARD PAGE */
   .leaderboard-wrap, .feed-wrap {
@@ -758,7 +681,7 @@
     background: none;
     border: none;
   }
-  .lb-tab.active { background: var(--phab); color: white; }
+  .lb-tab.active { background: var(--obsidian); color: var(--phab); }
 
   .lb-card {
     background: var(--surface);
@@ -900,18 +823,20 @@
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    background: var(--surface2);
-    border: 1px solid var(--border);
+    background: rgba(200,240,78,0.12);
+    border: 1px solid rgba(200,240,78,0.25);
     border-radius: 20px;
     padding: 0.3rem 0.75rem;
     font-size: 11px;
-    font-family: 'Space Mono', monospace;
-    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: var(--phab);
     margin-bottom: 1.5rem;
   }
   .scan-badge .dot {
     width: 6px; height: 6px;
-    background: var(--green);
+    background: var(--phab);
     border-radius: 50%;
     animation: pulse 2s infinite;
   }
@@ -928,13 +853,13 @@
     border-radius: var(--radius-sm);
     background: var(--surface);
     color: var(--text);
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'DM Sans', sans-serif;
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
   }
-  .try-again-btn:hover { border-color: var(--phab); color: var(--phab); }
+  .try-again-btn:hover { border-color: var(--obsidian); background: var(--obsidian); color: var(--phab); }
 
   /* SCORE COLORS */
   .score-great { color: var(--score-great); }
@@ -946,7 +871,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo">Nutri<span>IQ</span></div>
+  <div class="nav-logo">phab <span>NutriIQ</span></div>
   <div class="nav-right">
     <button class="nav-tab active" onclick="showPage('scan')">📸 Scan</button>
     <button class="nav-tab" onclick="showPage('feed')">📡 Live Feed</button>
@@ -958,12 +883,14 @@
 <!-- SCAN PAGE -->
 <div class="page active" id="page-scan">
   <div class="hero">
-    <div class="hero-eyebrow">Powered by Phab × AI</div>
-    <h1>What is your food<br><em>actually</em> doing to you?</h1>
-    <p class="hero-sub">Scan any nutrition label. Get a science-backed NutriIQ score. See how your city eats.</p>
-    <div class="scan-badge">
-      <span class="dot"></span>
-      <span id="scan-count">Be the first to scan today</span>
+    <div class="hero-inner">
+      <div class="hero-eyebrow">Powered by phab × AI</div>
+      <h1>What is your food<br><em>actually</em> doing to you?</h1>
+      <p class="hero-sub">Scan any nutrition label. Get a science-backed NutriIQ score. See how your city eats.</p>
+      <div class="scan-badge">
+        <span class="dot"></span>
+        <span id="scan-count">Be the first to scan today</span>
+      </div>
     </div>
   </div>
 
@@ -990,44 +917,17 @@
     </div>
   </div>
 
-  <div style="max-width:520px; margin:0 auto 0.75rem; padding:0 1rem; display:flex; gap:0.75rem;">
-    <button class="camera-btn primary" onclick="startCamera()" id="btn-open-camera">📷 Use Camera</button>
-    <div style="position:relative; flex:1;">
-      <button class="camera-btn" onclick="document.getElementById('file-input').click()">⬆ Upload Image</button>
-      <input type="file" id="file-input" accept="image/*" style="display:none">
+  <div style="max-width:520px; margin:0 auto; padding:0 1rem;">
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" id="file-input" accept="image/*" capture="environment">
+      <span class="upload-icon">📷</span>
+      <div class="upload-label">Take a photo or upload image</div>
+      <div class="upload-hint">Nutrition label · back of pack · any food</div>
     </div>
   </div>
-
-  <!-- CAMERA VIEWFINDER -->
-  <div class="camera-wrap" id="camera-wrap">
-    <div class="camera-container">
-      <video class="camera-video" id="camera-video" autoplay playsinline muted></video>
-      <div class="camera-overlay">
-        <div class="camera-rect" id="camera-rect">
-          <span class="corner-bl"></span>
-          <span class="corner-br"></span>
-        </div>
-      </div>
-      <div class="camera-hint" id="camera-hint">Point at a nutrition label</div>
-    </div>
-    <div class="camera-actions">
-      <button class="camera-btn" onclick="stopCamera()">✕ Cancel</button>
-      <button class="camera-btn primary" onclick="capturePhoto()" id="btn-capture">📸 Capture</button>
-    </div>
-  </div>
-
-  <!-- HIDDEN CANVAS FOR CAPTURE -->
-  <canvas id="capture-canvas" style="display:none"></canvas>
 
   <div class="img-preview" id="img-preview">
     <img id="preview-img" src="" alt="Uploaded label">
-  </div>
-
-  <div style="max-width:520px; margin:0 auto 0.75rem; padding:0 1rem;" id="product-name-wrap" class="hidden">
-    <label style="font-size:13px; font-weight:600; color:var(--muted); display:block; margin-bottom:0.4rem;">Product name <span style="font-weight:400;">(optional — helps if label is hard to read)</span></label>
-    <input type="text" id="product-name-input" placeholder="e.g. Lay's Classic Salted, Britannia NutriChoice…"
-      style="width:100%; padding:0.65rem 0.9rem; border:1.5px solid var(--border); border-radius:var(--radius-sm); font-family:inherit; font-size:14px; background:var(--surface); color:var(--text); outline:none;"
-      onfocus="this.style.borderColor='var(--phab)'" onblur="this.style.borderColor='var(--border)'">
   </div>
 
   <div style="text-align:center; padding:0 1rem 1rem;">
@@ -1086,9 +986,6 @@
       <div class="feed-stat"><span id="feed-total">—</span><small>total scans</small></div>
       <div class="feed-stat"><span id="feed-avg">—</span><small>avg NutriIQ</small></div>
       <div class="feed-stat"><span id="feed-today">—</span><small>today</small></div>
-    </div>
-    <div style="text-align:right; margin-bottom:0.75rem;">
-      <button onclick="exportFeedCSV()" style="background:var(--surface); border:1.5px solid var(--border); border-radius:8px; padding:6px 16px; font-size:13px; cursor:pointer; font-family:inherit;">⬇ Export CSV</button>
     </div>
     <div id="feed-content">
       <div class="feed-loading">Loading feed…</div>
@@ -1163,7 +1060,13 @@
 </div>
 
 <script>
-// Feed uses /api/feed server-side — no anon key needed in browser
+// Supabase public config — loaded from /api/config on first feed open
+window.SUPABASE_URL = '';
+window.SUPABASE_ANON_KEY = '';
+fetch('/api/config').then(r => r.json()).then(d => {
+  window.SUPABASE_URL = d.supabaseUrl || '';
+  window.SUPABASE_ANON_KEY = d.supabaseAnonKey || '';
+}).catch(() => {});
 
 // ===================== STATE =====================
 let uploadedImageBase64 = null;
@@ -1171,6 +1074,44 @@ let uploadedImageType = null;
 let currentResults = null;
 let lbMode = 'overall';
 
+const DEMO_LEADERBOARD = {
+  overall: [
+    { city: 'Bengaluru', score: 68, scans: 412, trend: '+2.1', emoji: '🟢' },
+    { city: 'Pune', score: 64, scans: 287, trend: '+1.4', emoji: '🟢' },
+    { city: 'Hyderabad', score: 61, scans: 334, trend: '+0.8', emoji: '🟡' },
+    { city: 'Mumbai', score: 58, scans: 891, trend: '-0.3', emoji: '🟡' },
+    { city: 'Chandigarh', score: 57, scans: 143, trend: '+1.1', emoji: '🟡' },
+    { city: 'Ahmedabad', score: 54, scans: 201, trend: '+0.5', emoji: '🟡' },
+    { city: 'Delhi', score: 51, scans: 763, trend: '-1.2', emoji: '🟡' },
+    { city: 'Chennai', score: 49, scans: 318, trend: '+2.3', emoji: '🔴' },
+    { city: 'Kolkata', score: 46, scans: 244, trend: '-0.7', emoji: '🔴' },
+    { city: 'Jaipur', score: 44, scans: 176, trend: '+0.2', emoji: '🔴' },
+  ],
+  protein: [
+    { city: 'Bengaluru', score: 72, scans: 412, trend: '+3.1', emoji: '🟢' },
+    { city: 'Hyderabad', score: 67, scans: 334, trend: '+1.9', emoji: '🟢' },
+    { city: 'Pune', score: 65, scans: 287, trend: '+0.8', emoji: '🟢' },
+    { city: 'Mumbai', score: 61, scans: 891, trend: '-0.5', emoji: '🟡' },
+    { city: 'Delhi', score: 58, scans: 763, trend: '+0.3', emoji: '🟡' },
+    { city: 'Chandigarh', score: 56, scans: 143, trend: '+1.4', emoji: '🟡' },
+    { city: 'Ahmedabad', score: 52, scans: 201, trend: '-0.2', emoji: '🟡' },
+    { city: 'Chennai', score: 50, scans: 318, trend: '+1.8', emoji: '🟡' },
+    { city: 'Kolkata', score: 44, scans: 244, trend: '-1.1', emoji: '🔴' },
+    { city: 'Jaipur', score: 41, scans: 176, trend: '+0.6', emoji: '🔴' },
+  ],
+  sugar: [
+    { city: 'Pune', score: 71, scans: 287, trend: '+2.2', emoji: '🟢' },
+    { city: 'Bengaluru', score: 69, scans: 412, trend: '+1.1', emoji: '🟢' },
+    { city: 'Chandigarh', score: 63, scans: 143, trend: '+2.8', emoji: '🟢' },
+    { city: 'Hyderabad', score: 60, scans: 334, trend: '+0.4', emoji: '🟡' },
+    { city: 'Ahmedabad', score: 56, scans: 201, trend: '+1.3', emoji: '🟡' },
+    { city: 'Mumbai', score: 54, scans: 891, trend: '-0.8', emoji: '🟡' },
+    { city: 'Delhi', score: 48, scans: 763, trend: '-1.6', emoji: '🔴' },
+    { city: 'Chennai', score: 47, scans: 318, trend: '+2.1', emoji: '🔴' },
+    { city: 'Jaipur', score: 45, scans: 176, trend: '+0.3', emoji: '🔴' },
+    { city: 'Kolkata', score: 43, scans: 244, trend: '-0.9', emoji: '🔴' },
+  ]
+};
 
 // ===================== PAGE ROUTING =====================
 function showPage(page) {
@@ -1182,102 +1123,23 @@ function showPage(page) {
   if (page === 'feed') initFeed();
 }
 
-// ===================== CAMERA =====================
-let cameraStream = null;
-let labelCheckInterval = null;
-
-async function startCamera() {
-  const wrap = document.getElementById('camera-wrap');
-  const video = document.getElementById('camera-video');
-  try {
-    cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 960 } }
-    });
-    video.srcObject = cameraStream;
-    wrap.classList.add('active');
-    document.getElementById('btn-open-camera').style.display = 'none';
-    startLabelDetection();
-  } catch (err) {
-    showToast('Camera not available — use Upload instead.');
-  }
-}
-
-function stopCamera() {
-  if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
-  clearInterval(labelCheckInterval);
-  const wrap = document.getElementById('camera-wrap');
-  const video = document.getElementById('camera-video');
-  wrap.classList.remove('active');
-  video.srcObject = null;
-  document.getElementById('btn-open-camera').style.display = '';
-  resetRect();
-}
-
-function resetRect() {
-  const rect = document.getElementById('camera-rect');
-  rect.classList.remove('detected', 'not-label');
-  document.getElementById('camera-hint').textContent = 'Point at a nutrition label';
-}
-
-function startLabelDetection() {
-  // Sample a frame every 1.5s and check contrast/text density as a proxy for label presence
-  // Full AI check happens only on capture — this is a lightweight heuristic
-  labelCheckInterval = setInterval(() => {
-    const video = document.getElementById('camera-video');
-    if (!video.videoWidth) return;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = 80; canvas.height = 60;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, 80, 60);
-    const data = ctx.getImageData(0, 0, 80, 60).data;
-
-    // Measure brightness variance — labels have high contrast (dark text on white)
-    let brightPixels = 0, darkPixels = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      const lum = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
-      if (lum > 200) brightPixels++;
-      else if (lum < 60) darkPixels++;
-    }
-    const total = (data.length / 4);
-    const brightRatio = brightPixels / total;
-    const darkRatio = darkPixels / total;
-
-    const rect = document.getElementById('camera-rect');
-    const hint = document.getElementById('camera-hint');
-
-    // Heuristic: label = lots of white background + some dark text
-    if (brightRatio > 0.45 && darkRatio > 0.05) {
-      rect.classList.add('detected');
-      rect.classList.remove('not-label');
-      hint.textContent = '✓ Label detected — tap Capture';
-    } else {
-      rect.classList.remove('detected');
-      rect.classList.add('not-label');
-      hint.textContent = 'Move closer to the label';
-    }
-  }, 1500);
-}
-
-function capturePhoto() {
-  const video = document.getElementById('camera-video');
-  const canvas = document.getElementById('capture-canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video, 0, 0);
-  canvas.toBlob(blob => {
-    stopCamera();
-    handleFile(new File([blob], 'capture.jpg', { type: 'image/jpeg' }));
-  }, 'image/jpeg', 0.92);
-}
-
 // ===================== FILE UPLOAD =====================
 const fileInput = document.getElementById('file-input');
+const uploadZone = document.getElementById('upload-zone');
 
 fileInput.addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
   handleFile(file);
+});
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
 });
 
 function handleFile(file) {
@@ -1295,7 +1157,6 @@ function handleFile(file) {
     document.getElementById('analyze-btn').disabled = false;
     document.getElementById('results-wrap').classList.remove('active');
     document.getElementById('loading-state').classList.remove('active');
-    document.getElementById('product-name-wrap').classList.remove('hidden');
   };
   reader.readAsDataURL(file);
 }
@@ -1305,7 +1166,6 @@ async function analyzeImage() {
   if (!uploadedImageBase64) return;
 
   const city = document.getElementById('city-select').value || 'Unspecified';
-  const manualProductName = document.getElementById('product-name-input').value.trim();
 
   document.getElementById('analyze-btn').disabled = true;
   document.getElementById('results-wrap').classList.remove('active');
@@ -1379,11 +1239,6 @@ Be precise. Use actual numbers from the label. If a value is not visible, use a 
     const result = await response.json();
     clearInterval(stepInterval);
     steps.forEach(s => { document.getElementById(s).classList.add('done'); document.getElementById(s).classList.remove('active'); });
-
-    // Apply manual product name if AI couldn't detect it
-    if (manualProductName && (!result.product_name || result.product_name === 'Unknown product')) {
-      result.product_name = manualProductName;
-    }
 
     if (result.not_a_food_label) {
       showResults(null, city, true);
@@ -1503,36 +1358,6 @@ function showResults(data, city, notLabel) {
     <div style="text-align:center; margin-bottom:1rem;">
       <button class="try-again-btn" onclick="resetScan()">← Scan another</button>
     </div>
-
-    <!-- PHAB CTA -->
-    <div style="background:linear-gradient(135deg,#e8541a 0%,#b83d10 100%); border-radius:var(--radius); padding:2rem 1.5rem; margin-bottom:2rem; color:#fff; position:relative; overflow:hidden;">
-      <div style="position:absolute;top:-20px;right:-20px;font-size:8rem;opacity:0.08;line-height:1;">🍫</div>
-      <div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; opacity:0.8; margin-bottom:0.5rem;">Why settle for less?</div>
-      <h3 style="font-size:1.4rem; font-weight:800; margin-bottom:0.5rem; line-height:1.2;">
-        ${score < 70 ? `Your food scored ${score}. Phab scores 82.` : `You have good taste. Phab scores 82 too.`}
-      </h3>
-      <p style="font-size:14px; opacity:0.9; margin-bottom:1.25rem; line-height:1.5;">
-        ${score < 50
-          ? `High protein. Zero sugar. No junk. While this food was doing damage, Phab was built to do the opposite.`
-          : score < 70
-          ? `Phab packs 17.5g protein per 100kcal with zero added sugar — engineered to actually fuel you.`
-          : `You already eat smart. Phab was made for people like you — 17.5g protein, 0g sugar, nothing fake.`
-        }
-      </p>
-      <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
-        <a href="https://phab.in" target="_blank" rel="noopener"
-          style="display:inline-block; background:#fff; color:var(--phab); font-weight:700; font-size:14px; padding:0.6rem 1.4rem; border-radius:8px; text-decoration:none;">
-          Try Phab →
-        </a>
-        <a href="https://phab.in" target="_blank" rel="noopener"
-          style="display:inline-block; background:rgba(255,255,255,0.15); color:#fff; font-weight:600; font-size:14px; padding:0.6rem 1.4rem; border-radius:8px; text-decoration:none; border:1.5px solid rgba(255,255,255,0.3);">
-          See the label
-        </a>
-      </div>
-      <div style="margin-top:1rem; font-size:12px; opacity:0.7;">
-        17.5g protein · 0g added sugar · No artificial additives · NutriIQ 82
-      </div>
-    </div>
   `;
 
   // Animate ring
@@ -1556,50 +1381,31 @@ function nutriCard(label, value, pct, color, note) {
 }
 
 // ===================== LEADERBOARD =====================
-async function renderLeaderboard() {
+function renderLeaderboard() {
+  const data = DEMO_LEADERBOARD[lbMode];
+  const maxScore = data[0].score;
   const lb = document.getElementById('lb-content');
-  lb.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--muted);font-size:14px;">Loading…</div>`;
-
-  try {
-    const res = await fetch(`/api/leaderboard?mode=${lbMode}`);
-    const json = await res.json();
-    const data = json.data || [];
-
-    if (!data.length) {
-      lb.innerHTML = `
-        <div style="text-align:center;padding:3rem;color:var(--muted);font-size:14px;">
-          <div style="font-size:2rem;margin-bottom:0.75rem;">🏙️</div>
-          <strong>No city data yet</strong><br>
-          Cities appear once they hit 10 scans. Start scanning!
-        </div>`;
-      return;
-    }
-
-    const maxScore = data[0].avg_score;
-    lb.innerHTML = data.map((row, i) => {
-      const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-      const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
-      const trend = parseFloat(row.trend_7d) || 0;
-      const trendClass = trend >= 0 ? 'trend-up' : 'trend-down';
-      const trendArrow = trend >= 0 ? '↑' : '↓';
-      const barPct = (row.avg_score / maxScore) * 100;
-      return `
-        <div class="lb-row">
-          <div class="lb-rank ${rankClass}">${rankLabel}</div>
-          <div class="lb-city-info">
-            <div class="lb-city-name">${row.city}</div>
-            <div class="lb-city-meta">${row.scan_count.toLocaleString()} scans · <span class="${trendClass}">${trendArrow} ${Math.abs(trend)} 7d</span></div>
-            <div class="lb-bar-wrap"><div class="lb-bar" style="width:${barPct}%"></div></div>
-          </div>
-          <div class="lb-score-col">
-            <div class="lb-score-val">${row.avg_score}</div>
-            <div class="lb-score-label">NutriIQ</div>
-          </div>
-        </div>`;
-    }).join('');
-  } catch (err) {
-    lb.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--muted);font-size:13px;">Could not load leaderboard.</div>`;
-  }
+  lb.innerHTML = data.map((row, i) => {
+    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+    const trendPos = parseFloat(row.trend) >= 0;
+    const trendClass = trendPos ? 'trend-up' : 'trend-down';
+    const trendArrow = trendPos ? '↑' : '↓';
+    const barPct = (row.score / maxScore) * 100;
+    return `
+      <div class="lb-row">
+        <div class="lb-rank ${rankClass}">${rankLabel}</div>
+        <div class="lb-city-info">
+          <div class="lb-city-name">${row.city}</div>
+          <div class="lb-city-meta">${row.scans.toLocaleString()} scans · <span class="${trendClass}">${trendArrow} ${Math.abs(row.trend)} 7d</span></div>
+          <div class="lb-bar-wrap"><div class="lb-bar" style="width:${barPct}%"></div></div>
+        </div>
+        <div class="lb-score-col">
+          <div class="lb-score-val">${row.score}</div>
+          <div class="lb-score-label">NutriIQ</div>
+        </div>
+      </div>`;
+  }).join('');
 }
 
 function switchLbTab(mode, el) {
@@ -1617,8 +1423,6 @@ function resetScan() {
   document.getElementById('results-wrap').innerHTML = '';
   document.getElementById('analyze-btn').disabled = true;
   document.getElementById('file-input').value = '';
-  document.getElementById('product-name-input').value = '';
-  document.getElementById('product-name-wrap').classList.add('hidden');
   document.querySelectorAll('.loading-step').forEach(s => { s.classList.remove('active', 'done'); });
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -1640,22 +1444,11 @@ function shareCity(city, score) {
   // In production: POST to backend, update city rolling avg
 }
 
-async function updateScanCount() {
-  try {
-    const res = await fetch('/api/feed');
-    const json = await res.json();
-    if (!json.ok || !json.data) return;
-    const today = json.data.filter(r => new Date(r.created_at).toDateString() === new Date().toDateString()).length;
-    const cities = new Set(json.data.map(r => r.city).filter(Boolean)).size;
-    const el = document.getElementById('scan-count');
-    if (today > 0) {
-      el.textContent = `${today.toLocaleString()} scan${today !== 1 ? 's' : ''} today · ${cities} cit${cities !== 1 ? 'ies' : 'y'} competing`;
-    }
-  } catch (_) {}
+function updateScanCount() {
+  const el = document.getElementById('scan-count');
+  const current = parseInt(el.textContent.replace(/,/g, ''));
+  el.textContent = `${(current + 1).toLocaleString()} scans today · 14 cities competing`;
 }
-
-// Load scan count on page start
-updateScanCount();
 
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -1686,25 +1479,31 @@ function timeAgo(iso) {
   return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
-let _lastFeedRows = [];
-
 async function fetchFeed() {
+  const SUPABASE_URL = window.SUPABASE_URL || '';
+  const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '';
+
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    document.getElementById('feed-content').innerHTML = `
+      <div style="text-align:center; padding:3rem; color:var(--muted); font-size:14px;">
+        <div style="font-size:2rem; margin-bottom:1rem;">🔌</div>
+        <strong>Supabase not connected</strong><br>
+        Add <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> as env vars in Vercel.
+      </div>`;
+    return;
+  }
+
   try {
-    const res = await fetch('/api/feed');
-    const json = await res.json();
+    // Fetch recent 50 scans
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/scans?select=id,created_at,city,product_name,nutri_iq_score,tier_label,protein_per_100kcal,sugar_per_100g,has_artificial_additives&order=created_at.desc&limit=50`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      }
+    });
 
-    if (!json.ok) {
-      document.getElementById('feed-content').innerHTML = `
-        <div style="text-align:center; padding:3rem; color:var(--muted); font-size:14px;">
-          <div style="font-size:2rem; margin-bottom:1rem;">🔌</div>
-          <strong>Not connected</strong><br>
-          ${json.error || 'Check Supabase env vars in Vercel.'}
-        </div>`;
-      return;
-    }
-
-    const rows = json.data || [];
-    _lastFeedRows = rows;
+    if (!res.ok) throw new Error('Fetch failed');
+    const rows = await res.json();
 
     // Stats
     const total = rows.length;
@@ -1767,34 +1566,6 @@ function initFeed() {
   if (!feedInterval) {
     feedInterval = setInterval(fetchFeed, 30000);
   }
-}
-
-function exportFeedCSV() {
-  if (!_lastFeedRows.length) {
-    showToast('No data to export yet.');
-    return;
-  }
-  const headers = ['Time', 'Product', 'City', 'NutriIQ Score', 'Tier', 'Protein/100kcal', 'Sugar/100g', 'Artificial Additives'];
-  const rows = _lastFeedRows.map(r => [
-    new Date(r.created_at).toISOString(),
-    `"${(r.product_name || '').replace(/"/g, '""')}"`,
-    r.city || '',
-    r.nutri_iq_score ?? '',
-    (r.tier_label || '').replace(/_/g, ' '),
-    r.protein_per_100kcal != null ? r.protein_per_100kcal.toFixed(1) : '',
-    r.sugar_per_100g != null ? r.sugar_per_100g.toFixed(1) : '',
-    r.has_artificial_additives ? 'Yes' : 'No'
-  ].join(','));
-
-  const csv = [headers.join(','), ...rows].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `nutriiq-scans-${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('✓ CSV exported');
 }
 </script>
 </body>
