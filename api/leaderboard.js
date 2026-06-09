@@ -22,7 +22,14 @@ export default async function handler(req, res) {
 
     if (error) throw error;
 
-    return res.status(200).json({ ok: true, mode, data });
+    // Debug: also return raw scan count for diagnosis
+    const { count: totalScans } = await supabase
+      .from('scans')
+      .select('*', { count: 'exact', head: true })
+      .not('city', 'is', null)
+      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+
+    return res.status(200).json({ ok: true, mode, data, _debug: { scans_with_city_last7d: totalScans, rpc_rows: data?.length ?? 0 } });
 
   } catch (err) {
     console.error('Leaderboard error:', err);
