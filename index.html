@@ -1082,44 +1082,6 @@ let uploadedImageType = null;
 let currentResults = null;
 let lbMode = 'overall';
 
-const DEMO_LEADERBOARD = {
-  overall: [
-    { city: 'Bengaluru', score: 68, scans: 412, trend: '+2.1', emoji: '🟢' },
-    { city: 'Pune', score: 64, scans: 287, trend: '+1.4', emoji: '🟢' },
-    { city: 'Hyderabad', score: 61, scans: 334, trend: '+0.8', emoji: '🟡' },
-    { city: 'Mumbai', score: 58, scans: 891, trend: '-0.3', emoji: '🟡' },
-    { city: 'Chandigarh', score: 57, scans: 143, trend: '+1.1', emoji: '🟡' },
-    { city: 'Ahmedabad', score: 54, scans: 201, trend: '+0.5', emoji: '🟡' },
-    { city: 'Delhi', score: 51, scans: 763, trend: '-1.2', emoji: '🟡' },
-    { city: 'Chennai', score: 49, scans: 318, trend: '+2.3', emoji: '🔴' },
-    { city: 'Kolkata', score: 46, scans: 244, trend: '-0.7', emoji: '🔴' },
-    { city: 'Jaipur', score: 44, scans: 176, trend: '+0.2', emoji: '🔴' },
-  ],
-  protein: [
-    { city: 'Bengaluru', score: 72, scans: 412, trend: '+3.1', emoji: '🟢' },
-    { city: 'Hyderabad', score: 67, scans: 334, trend: '+1.9', emoji: '🟢' },
-    { city: 'Pune', score: 65, scans: 287, trend: '+0.8', emoji: '🟢' },
-    { city: 'Mumbai', score: 61, scans: 891, trend: '-0.5', emoji: '🟡' },
-    { city: 'Delhi', score: 58, scans: 763, trend: '+0.3', emoji: '🟡' },
-    { city: 'Chandigarh', score: 56, scans: 143, trend: '+1.4', emoji: '🟡' },
-    { city: 'Ahmedabad', score: 52, scans: 201, trend: '-0.2', emoji: '🟡' },
-    { city: 'Chennai', score: 50, scans: 318, trend: '+1.8', emoji: '🟡' },
-    { city: 'Kolkata', score: 44, scans: 244, trend: '-1.1', emoji: '🔴' },
-    { city: 'Jaipur', score: 41, scans: 176, trend: '+0.6', emoji: '🔴' },
-  ],
-  sugar: [
-    { city: 'Pune', score: 71, scans: 287, trend: '+2.2', emoji: '🟢' },
-    { city: 'Bengaluru', score: 69, scans: 412, trend: '+1.1', emoji: '🟢' },
-    { city: 'Chandigarh', score: 63, scans: 143, trend: '+2.8', emoji: '🟢' },
-    { city: 'Hyderabad', score: 60, scans: 334, trend: '+0.4', emoji: '🟡' },
-    { city: 'Ahmedabad', score: 56, scans: 201, trend: '+1.3', emoji: '🟡' },
-    { city: 'Mumbai', score: 54, scans: 891, trend: '-0.8', emoji: '🟡' },
-    { city: 'Delhi', score: 48, scans: 763, trend: '-1.6', emoji: '🔴' },
-    { city: 'Chennai', score: 47, scans: 318, trend: '+2.1', emoji: '🔴' },
-    { city: 'Jaipur', score: 45, scans: 176, trend: '+0.3', emoji: '🔴' },
-    { city: 'Kolkata', score: 43, scans: 244, trend: '-0.9', emoji: '🔴' },
-  ]
-};
 
 // ===================== PAGE ROUTING =====================
 function showPage(page) {
@@ -1389,31 +1351,46 @@ function nutriCard(label, value, pct, color, note) {
 }
 
 // ===================== LEADERBOARD =====================
-function renderLeaderboard() {
-  const data = DEMO_LEADERBOARD[lbMode];
-  const maxScore = data[0].score;
+async function renderLeaderboard() {
   const lb = document.getElementById('lb-content');
-  lb.innerHTML = data.map((row, i) => {
-    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-    const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
-    const trendPos = parseFloat(row.trend) >= 0;
-    const trendClass = trendPos ? 'trend-up' : 'trend-down';
-    const trendArrow = trendPos ? '↑' : '↓';
-    const barPct = (row.score / maxScore) * 100;
-    return `
-      <div class="lb-row">
-        <div class="lb-rank ${rankClass}">${rankLabel}</div>
-        <div class="lb-city-info">
-          <div class="lb-city-name">${row.city}</div>
-          <div class="lb-city-meta">${row.scans.toLocaleString()} scans · <span class="${trendClass}">${trendArrow} ${Math.abs(row.trend)} 7d</span></div>
-          <div class="lb-bar-wrap"><div class="lb-bar" style="width:${barPct}%"></div></div>
-        </div>
-        <div class="lb-score-col">
-          <div class="lb-score-val">${row.score}</div>
-          <div class="lb-score-label">NutriIQ</div>
-        </div>
+  lb.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:14px;">Loading…</div>';
+  try {
+    const res = await fetch(`/api/leaderboard?mode=${lbMode}`);
+    const json = await res.json();
+    if (!json.ok || !json.data || !json.data.length) {
+      lb.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--muted);font-size:14px;">
+        <div style="font-size:2rem;margin-bottom:1rem;">📡</div>
+        <strong>No city data yet</strong><br>
+        Cities appear once they have 10+ scans in the last 7 days.
       </div>`;
-  }).join('');
+      return;
+    }
+    const data = json.data;
+    const maxScore = data[0].avg_score;
+    lb.innerHTML = data.map((row, i) => {
+      const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+      const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+      const trend = parseFloat(row.trend_7d) || 0;
+      const trendClass = trend >= 0 ? 'trend-up' : 'trend-down';
+      const trendArrow = trend >= 0 ? '↑' : '↓';
+      const barPct = (row.avg_score / maxScore) * 100;
+      return `
+        <div class="lb-row">
+          <div class="lb-rank ${rankClass}">${rankLabel}</div>
+          <div class="lb-city-info">
+            <div class="lb-city-name">${row.city}</div>
+            <div class="lb-city-meta">${Number(row.scan_count).toLocaleString()} scans · <span class="${trendClass}">${trendArrow} ${Math.abs(trend).toFixed(1)} 7d</span></div>
+            <div class="lb-bar-wrap"><div class="lb-bar" style="width:${barPct}%"></div></div>
+          </div>
+          <div class="lb-score-col">
+            <div class="lb-score-val">${row.avg_score}</div>
+            <div class="lb-score-label">NutriIQ</div>
+          </div>
+        </div>`;
+    }).join('');
+  } catch (err) {
+    lb.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--muted);font-size:14px;">Could not load leaderboard. ${err.message}</div>`;
+  }
 }
 
 function switchLbTab(mode, el) {
@@ -1452,10 +1429,21 @@ function shareCity(city, score) {
   // In production: POST to backend, update city rolling avg
 }
 
-function updateScanCount() {
-  const el = document.getElementById('scan-count');
-  const current = parseInt(el.textContent.replace(/,/g, ''));
-  el.textContent = `${(current + 1).toLocaleString()} scans today · 14 cities competing`;
+async function updateScanCount() {
+  try {
+    const res = await fetch('/api/feed');
+    const json = await res.json();
+    if (!json.ok) return;
+    const rows = json.data || [];
+    const today = rows.filter(r => new Date(r.created_at).toDateString() === new Date().toDateString()).length;
+    const cities = new Set(rows.map(r => r.city).filter(Boolean)).size;
+    const el = document.getElementById('scan-count');
+    if (today > 0) {
+      el.textContent = `${today.toLocaleString()} scan${today === 1 ? '' : 's'} today${cities > 0 ? ` · ${cities} cit${cities === 1 ? 'y' : 'ies'} competing` : ''}`;
+    } else {
+      el.textContent = rows.length > 0 ? `${rows.length.toLocaleString()} total scans` : 'Be the first to scan today';
+    }
+  } catch (_) {}
 }
 
 function showToast(msg) {
@@ -1465,13 +1453,15 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-// Init leaderboard
+// Init leaderboard and live stats
 renderLeaderboard();
+updateScanCount();
 
 // ===================== LIVE FEED =====================
 let feedInterval = null;
 let feedInitialized = false;
 let lastFeedIds = new Set();
+let _lastFeedRows = [];
 
 function getTierColor(score) {
   if (score >= 75) return 'great';
@@ -1503,6 +1493,7 @@ async function fetchFeed() {
     }
 
     const rows = json.data || [];
+    _lastFeedRows = rows;
 
     // Stats
     const total = rows.length;
@@ -1532,6 +1523,9 @@ async function fetchFeed() {
     }).join('');
 
     document.getElementById('feed-content').innerHTML = `
+      <div style="text-align:right; margin-bottom:0.75rem;">
+        <button onclick="exportFeedCSV()" style="background:var(--surface); border:1.5px solid var(--border); border-radius:8px; padding:6px 16px; font-size:13px; cursor:pointer; font-family:inherit;">⬇ Export CSV</button>
+      </div>
       <table class="feed-table">
         <thead>
           <tr>
@@ -1558,6 +1552,22 @@ async function fetchFeed() {
     console.error('Feed error:', err);
     document.getElementById('feed-content').innerHTML = `<div class="feed-loading">Could not load feed. ${err.message}</div>`;
   }
+}
+
+function exportFeedCSV() {
+  if (!_lastFeedRows.length) { alert('No data to export yet. Refresh the feed first.'); return; }
+  const header = ['Time','Product','City','Score','Tier','Protein/100kcal','Sugar/100g','Additives'];
+  const rows = _lastFeedRows.map(r => [
+    r.created_at, r.product_name || '', r.city || '',
+    r.nutri_iq_score ?? '', r.tier_label || '',
+    r.protein_per_100kcal ?? '', r.sugar_per_100g ?? '',
+    r.has_artificial_additives ? 'Yes' : 'No'
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+  const csv = [header.join(','), ...rows].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = `nutriiq-feed-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
 }
 
 function initFeed() {
