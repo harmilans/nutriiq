@@ -1749,7 +1749,7 @@ const LB_META = {
     unit: '',
     gradeLabel: score => score >= 75 ? '🟢 Smart' : score >= 55 ? '🟡 Average' : '🔴 Needs work',
     vsPhabText: (score) => {
-      const diff = Math.abs(score - 82);
+      const diff = Math.abs(score - 82).toFixed(2);
       return score >= 82 ? `+${diff} above Phab 🏆` : `-${diff} below Phab`;
     }
   },
@@ -1773,7 +1773,7 @@ const LB_META = {
     unit: '',
     gradeLabel: score => score >= 85 ? '🟢 Sugar smart' : score >= 65 ? '🟡 Moderate' : '🔴 High sugar',
     vsPhabText: (score) => {
-      const diff = Math.abs(score - 100);
+      const diff = Math.abs(score - 100).toFixed(2);
       return score >= 100 ? `Matches Phab 🏆` : `-${diff} pts vs Phab`;
     }
   }
