@@ -31,11 +31,14 @@ create index if not exists scans_created_at
 -- Row level security (read-only for anon, write via service key only)
 alter table public.scans enable row level security;
 
-create policy "Public read" on public.scans
-  for select using (true);
-
-create policy "Service write" on public.scans
-  for insert with check (true); -- Enforced by using service key in API only
+do $$ begin
+  if not exists (select 1 from pg_policies where tablename='scans' and policyname='Public read') then
+    create policy "Public read" on public.scans for select using (true);
+  end if;
+  if not exists (select 1 from pg_policies where tablename='scans' and policyname='Service write') then
+    create policy "Service write" on public.scans for insert with check (true);
+  end if;
+end $$;
 
 
 -- =====================================================
