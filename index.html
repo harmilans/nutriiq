@@ -252,12 +252,105 @@
     display: none;
   }
   .img-preview.active { display: block; }
+  .hidden { display: none; }
   .img-preview img {
     width: 100%;
     max-height: 240px;
     object-fit: cover;
     display: block;
   }
+
+  /* CAMERA VIEWFINDER */
+  .camera-wrap {
+    max-width: 520px;
+    margin: 0 auto 1rem;
+    padding: 0 1rem;
+    display: none;
+  }
+  .camera-wrap.active { display: block; }
+  .camera-container {
+    position: relative;
+    width: 100%;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #000;
+    aspect-ratio: 4/3;
+  }
+  .camera-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .camera-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .camera-rect {
+    width: 75%;
+    height: 55%;
+    border: 3px solid rgba(255,255,255,0.5);
+    border-radius: 8px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    position: relative;
+  }
+  .camera-rect::before, .camera-rect::after,
+  .camera-rect .corner-br, .camera-rect .corner-bl {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-color: inherit;
+    border-style: solid;
+  }
+  .camera-rect::before { top: -3px; left: -3px; border-width: 3px 0 0 3px; border-radius: 6px 0 0 0; }
+  .camera-rect::after  { top: -3px; right: -3px; border-width: 3px 3px 0 0; border-radius: 0 6px 0 0; }
+  .camera-rect .corner-bl { bottom: -3px; left: -3px; border-width: 0 0 3px 3px; border-radius: 0 0 0 6px; }
+  .camera-rect .corner-br { bottom: -3px; right: -3px; border-width: 0 3px 3px 0; border-radius: 0 0 6px 0; }
+  .camera-rect.detected {
+    border-color: #1a7a4a;
+    box-shadow: 0 0 0 2px rgba(26,122,74,0.4), inset 0 0 30px rgba(26,122,74,0.1);
+  }
+  .camera-rect.not-label {
+    border-color: #c0392b;
+    box-shadow: 0 0 0 2px rgba(192,57,43,0.4);
+  }
+  .camera-hint {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .camera-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+  .camera-btn {
+    flex: 1;
+    padding: 0.75rem;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .camera-btn.primary { background: var(--phab); color: #fff; border-color: var(--phab); }
+  .camera-btn.primary:hover { background: var(--phab-dark); }
+  .camera-btn:hover { background: var(--surface2); }
 
   /* RESULTS CARD */
   .results-wrap {
@@ -897,17 +990,44 @@
     </div>
   </div>
 
-  <div style="max-width:520px; margin:0 auto; padding:0 1rem;">
-    <div class="upload-zone" id="upload-zone">
-      <input type="file" id="file-input" accept="image/*" capture="environment">
-      <span class="upload-icon">📷</span>
-      <div class="upload-label">Take a photo or upload image</div>
-      <div class="upload-hint">Nutrition label · back of pack · any food</div>
+  <div style="max-width:520px; margin:0 auto 0.75rem; padding:0 1rem; display:flex; gap:0.75rem;">
+    <button class="camera-btn primary" onclick="startCamera()" id="btn-open-camera">📷 Use Camera</button>
+    <div style="position:relative; flex:1;">
+      <button class="camera-btn" onclick="document.getElementById('file-input').click()">⬆ Upload Image</button>
+      <input type="file" id="file-input" accept="image/*" style="display:none">
     </div>
   </div>
 
+  <!-- CAMERA VIEWFINDER -->
+  <div class="camera-wrap" id="camera-wrap">
+    <div class="camera-container">
+      <video class="camera-video" id="camera-video" autoplay playsinline muted></video>
+      <div class="camera-overlay">
+        <div class="camera-rect" id="camera-rect">
+          <span class="corner-bl"></span>
+          <span class="corner-br"></span>
+        </div>
+      </div>
+      <div class="camera-hint" id="camera-hint">Point at a nutrition label</div>
+    </div>
+    <div class="camera-actions">
+      <button class="camera-btn" onclick="stopCamera()">✕ Cancel</button>
+      <button class="camera-btn primary" onclick="capturePhoto()" id="btn-capture">📸 Capture</button>
+    </div>
+  </div>
+
+  <!-- HIDDEN CANVAS FOR CAPTURE -->
+  <canvas id="capture-canvas" style="display:none"></canvas>
+
   <div class="img-preview" id="img-preview">
     <img id="preview-img" src="" alt="Uploaded label">
+  </div>
+
+  <div style="max-width:520px; margin:0 auto 0.75rem; padding:0 1rem;" id="product-name-wrap" class="hidden">
+    <label style="font-size:13px; font-weight:600; color:var(--muted); display:block; margin-bottom:0.4rem;">Product name <span style="font-weight:400;">(optional — helps if label is hard to read)</span></label>
+    <input type="text" id="product-name-input" placeholder="e.g. Lay's Classic Salted, Britannia NutriChoice…"
+      style="width:100%; padding:0.65rem 0.9rem; border:1.5px solid var(--border); border-radius:var(--radius-sm); font-family:inherit; font-size:14px; background:var(--surface); color:var(--text); outline:none;"
+      onfocus="this.style.borderColor='var(--phab)'" onblur="this.style.borderColor='var(--border)'">
   </div>
 
   <div style="text-align:center; padding:0 1rem 1rem;">
@@ -1062,23 +1182,102 @@ function showPage(page) {
   if (page === 'feed') initFeed();
 }
 
+// ===================== CAMERA =====================
+let cameraStream = null;
+let labelCheckInterval = null;
+
+async function startCamera() {
+  const wrap = document.getElementById('camera-wrap');
+  const video = document.getElementById('camera-video');
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 960 } }
+    });
+    video.srcObject = cameraStream;
+    wrap.classList.add('active');
+    document.getElementById('btn-open-camera').style.display = 'none';
+    startLabelDetection();
+  } catch (err) {
+    showToast('Camera not available — use Upload instead.');
+  }
+}
+
+function stopCamera() {
+  if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+  clearInterval(labelCheckInterval);
+  const wrap = document.getElementById('camera-wrap');
+  const video = document.getElementById('camera-video');
+  wrap.classList.remove('active');
+  video.srcObject = null;
+  document.getElementById('btn-open-camera').style.display = '';
+  resetRect();
+}
+
+function resetRect() {
+  const rect = document.getElementById('camera-rect');
+  rect.classList.remove('detected', 'not-label');
+  document.getElementById('camera-hint').textContent = 'Point at a nutrition label';
+}
+
+function startLabelDetection() {
+  // Sample a frame every 1.5s and check contrast/text density as a proxy for label presence
+  // Full AI check happens only on capture — this is a lightweight heuristic
+  labelCheckInterval = setInterval(() => {
+    const video = document.getElementById('camera-video');
+    if (!video.videoWidth) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 80; canvas.height = 60;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, 80, 60);
+    const data = ctx.getImageData(0, 0, 80, 60).data;
+
+    // Measure brightness variance — labels have high contrast (dark text on white)
+    let brightPixels = 0, darkPixels = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      const lum = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+      if (lum > 200) brightPixels++;
+      else if (lum < 60) darkPixels++;
+    }
+    const total = (data.length / 4);
+    const brightRatio = brightPixels / total;
+    const darkRatio = darkPixels / total;
+
+    const rect = document.getElementById('camera-rect');
+    const hint = document.getElementById('camera-hint');
+
+    // Heuristic: label = lots of white background + some dark text
+    if (brightRatio > 0.45 && darkRatio > 0.05) {
+      rect.classList.add('detected');
+      rect.classList.remove('not-label');
+      hint.textContent = '✓ Label detected — tap Capture';
+    } else {
+      rect.classList.remove('detected');
+      rect.classList.add('not-label');
+      hint.textContent = 'Move closer to the label';
+    }
+  }, 1500);
+}
+
+function capturePhoto() {
+  const video = document.getElementById('camera-video');
+  const canvas = document.getElementById('capture-canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  canvas.toBlob(blob => {
+    stopCamera();
+    handleFile(new File([blob], 'capture.jpg', { type: 'image/jpeg' }));
+  }, 'image/jpeg', 0.92);
+}
+
 // ===================== FILE UPLOAD =====================
 const fileInput = document.getElementById('file-input');
-const uploadZone = document.getElementById('upload-zone');
 
 fileInput.addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
   handleFile(file);
-});
-
-uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
-uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
-uploadZone.addEventListener('drop', e => {
-  e.preventDefault();
-  uploadZone.classList.remove('dragover');
-  const file = e.dataTransfer.files[0];
-  if (file) handleFile(file);
 });
 
 function handleFile(file) {
@@ -1096,6 +1295,7 @@ function handleFile(file) {
     document.getElementById('analyze-btn').disabled = false;
     document.getElementById('results-wrap').classList.remove('active');
     document.getElementById('loading-state').classList.remove('active');
+    document.getElementById('product-name-wrap').classList.remove('hidden');
   };
   reader.readAsDataURL(file);
 }
@@ -1105,6 +1305,7 @@ async function analyzeImage() {
   if (!uploadedImageBase64) return;
 
   const city = document.getElementById('city-select').value || 'Unspecified';
+  const manualProductName = document.getElementById('product-name-input').value.trim();
 
   document.getElementById('analyze-btn').disabled = true;
   document.getElementById('results-wrap').classList.remove('active');
@@ -1178,6 +1379,11 @@ Be precise. Use actual numbers from the label. If a value is not visible, use a 
     const result = await response.json();
     clearInterval(stepInterval);
     steps.forEach(s => { document.getElementById(s).classList.add('done'); document.getElementById(s).classList.remove('active'); });
+
+    // Apply manual product name if AI couldn't detect it
+    if (manualProductName && (!result.product_name || result.product_name === 'Unknown product')) {
+      result.product_name = manualProductName;
+    }
 
     if (result.not_a_food_label) {
       showResults(null, city, true);
@@ -1297,6 +1503,36 @@ function showResults(data, city, notLabel) {
     <div style="text-align:center; margin-bottom:1rem;">
       <button class="try-again-btn" onclick="resetScan()">← Scan another</button>
     </div>
+
+    <!-- PHAB CTA -->
+    <div style="background:linear-gradient(135deg,#e8541a 0%,#b83d10 100%); border-radius:var(--radius); padding:2rem 1.5rem; margin-bottom:2rem; color:#fff; position:relative; overflow:hidden;">
+      <div style="position:absolute;top:-20px;right:-20px;font-size:8rem;opacity:0.08;line-height:1;">🍫</div>
+      <div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; opacity:0.8; margin-bottom:0.5rem;">Why settle for less?</div>
+      <h3 style="font-size:1.4rem; font-weight:800; margin-bottom:0.5rem; line-height:1.2;">
+        ${score < 70 ? `Your food scored ${score}. Phab scores 82.` : `You have good taste. Phab scores 82 too.`}
+      </h3>
+      <p style="font-size:14px; opacity:0.9; margin-bottom:1.25rem; line-height:1.5;">
+        ${score < 50
+          ? `High protein. Zero sugar. No junk. While this food was doing damage, Phab was built to do the opposite.`
+          : score < 70
+          ? `Phab packs 17.5g protein per 100kcal with zero added sugar — engineered to actually fuel you.`
+          : `You already eat smart. Phab was made for people like you — 17.5g protein, 0g sugar, nothing fake.`
+        }
+      </p>
+      <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+        <a href="https://phab.in" target="_blank" rel="noopener"
+          style="display:inline-block; background:#fff; color:var(--phab); font-weight:700; font-size:14px; padding:0.6rem 1.4rem; border-radius:8px; text-decoration:none;">
+          Try Phab →
+        </a>
+        <a href="https://phab.in" target="_blank" rel="noopener"
+          style="display:inline-block; background:rgba(255,255,255,0.15); color:#fff; font-weight:600; font-size:14px; padding:0.6rem 1.4rem; border-radius:8px; text-decoration:none; border:1.5px solid rgba(255,255,255,0.3);">
+          See the label
+        </a>
+      </div>
+      <div style="margin-top:1rem; font-size:12px; opacity:0.7;">
+        17.5g protein · 0g added sugar · No artificial additives · NutriIQ 82
+      </div>
+    </div>
   `;
 
   // Animate ring
@@ -1381,6 +1617,8 @@ function resetScan() {
   document.getElementById('results-wrap').innerHTML = '';
   document.getElementById('analyze-btn').disabled = true;
   document.getElementById('file-input').value = '';
+  document.getElementById('product-name-input').value = '';
+  document.getElementById('product-name-wrap').classList.add('hidden');
   document.querySelectorAll('.loading-step').forEach(s => { s.classList.remove('active', 'done'); });
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
