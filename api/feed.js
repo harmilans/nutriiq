@@ -1,4 +1,6 @@
 // api/feed.js
+// Returns recent scans for the live feed — uses service key server-side
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Access-Control-Allow-Origin', process.env.ALLOWED_ORIGIN || '*');
@@ -21,6 +23,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ ok: true, data });
   } catch (err) {
+    console.error('Feed error:', err);
     return res.status(500).json({ ok: false, error: err.message });
   }
 }
