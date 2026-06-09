@@ -4,9 +4,6 @@
     "api/analyze.js": {
       "maxDuration": 30,
       "memory": 512
-    },
-    "api/leaderboard.js": {
-      "runtime": "edge"
     }
   },
   "env": {
