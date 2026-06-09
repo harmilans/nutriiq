@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NutriIQ — What's Really In Your Food?</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg: #f7f3ee;
+    --surface: #ffffff;
+    --surface2: #f0ebe4;
+    --border: #e0d8ce;
+    --text: #1a1208;
+    --muted: #8a7e6e;
+    --phab: #e8541a;
+    --phab-light: #fff0ea;
+    --phab-dark: #b83d10;
+    --green: #1a7a4a;
+    --green-light: #e8f5ee;
+    --yellow: #d4820a;
+    --yellow-light: #fff8e6;
+    --red: #c0392b;
+    --red-light: #fdecea;
+    --score-great: #1a7a4a;
+    --score-ok: #d4820a;
+    --score-bad: #c0392b;
+    --radius: 16px;
+    --radius-sm: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* NAV */
+  nav {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 1.5rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-logo {
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--phab);
+    letter-spacing: -0.03em;
+  }
+  .nav-logo span { color: var(--text); }
+  .nav-right {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+  .nav-tab {
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    background: none;
+  }
+  .nav-tab.active, .nav-tab:hover {
+    color: var(--phab);
+    border-color: var(--phab);
+    background: var(--phab-light);
+  }
+
+  /* PAGES */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* HERO */
+  .hero {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 2rem;
+    text-align: center;
+  }
+  .hero-eyebrow {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--phab);
+    background: var(--phab-light);
+    border: 1px solid rgba(232,84,26,0.2);
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    margin-bottom: 1.25rem;
+  }
+  .hero h1 {
+    font-size: clamp(2rem, 6vw, 3.2rem);
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 1rem;
+    letter-spacing: -0.03em;
+  }
+  .hero h1 em {
+    color: var(--phab);
+    font-style: normal;
+    position: relative;
+  }
+  .hero-sub {
+    color: var(--muted);
+    font-size: 16px;
+    max-width: 480px;
+    margin: 0 auto 2rem;
+    font-weight: 400;
+  }
+
+  /* UPLOAD ZONE */
+  .upload-zone {
+    max-width: 520px;
+    margin: 0 auto 2rem;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s;
+    background: var(--surface);
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--phab);
+    background: var(--phab-light);
+  }
+  .upload-zone input[type=file] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+  .upload-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+  }
+  .upload-label {
+    font-weight: 600;
+    font-size: 17px;
+    margin-bottom: 0.4rem;
+    color: var(--text);
+  }
+  .upload-hint {
+    font-size: 13px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* CITY SELECT */
+  .city-select-wrap {
+    max-width: 520px;
+    margin: 0 auto 1rem;
+    display: flex;
+    gap: 0.5rem;
+  }
+  .city-select-wrap select, .city-select-wrap input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .city-select-wrap select:focus, .city-select-wrap input:focus {
+    border-color: var(--phab);
+  }
+
+  /* ANALYZE BTN */
+  .btn-analyze {
+    display: block;
+    margin: 0 auto;
+    background: var(--phab);
+    color: white;
+    border: none;
+    padding: 0.9rem 2.5rem;
+    border-radius: var(--radius-sm);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: -0.01em;
+  }
+  .btn-analyze:hover { background: var(--phab-dark); transform: translateY(-1px); }
+  .btn-analyze:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
+
+  /* LOADING STATE */
+  .loading-state {
+    max-width: 520px;
+    margin: 2rem auto;
+    text-align: center;
+    display: none;
+  }
+  .loading-state.active { display: block; }
+  .loading-spinner {
+    width: 48px;
+    height: 48px;
+    border: 3px solid var(--border);
+    border-top-color: var(--phab);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+    margin: 0 auto 1rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-steps {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .loading-step {
+    padding: 0.2rem 0;
+    transition: color 0.3s;
+  }
+  .loading-step.done { color: var(--green); }
+  .loading-step.active { color: var(--phab); font-weight: 700; }
+
+  /* IMAGE PREVIEW */
+  .img-preview {
+    max-width: 520px;
+    margin: 0 auto 1.5rem;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1.5px solid var(--border);
+    display: none;
+  }
+  .img-preview.active { display: block; }
+  .img-preview img {
+    width: 100%;
+    max-height: 240px;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* RESULTS CARD */
+  .results-wrap {
+    max-width: 680px;
+    margin: 0 auto 3rem;
+    padding: 0 1rem;
+    display: none;
+  }
+  .results-wrap.active { display: block; }
+
+  /* SCORE RING */
+  .score-hero {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2rem 1.5rem;
+    text-align: center;
+    margin-bottom: 1rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .score-hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: var(--score-color, var(--phab));
+  }
+  .score-ring-wrap {
+    display: inline-block;
+    position: relative;
+    margin-bottom: 1rem;
+  }
+  .score-ring {
+    width: 140px;
+    height: 140px;
+    transform: rotate(-90deg);
+  }
+  .score-ring-bg {
+    fill: none;
+    stroke: var(--surface2);
+    stroke-width: 10;
+  }
+  .score-ring-fill {
+    fill: none;
+    stroke-width: 10;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s ease;
+  }
+  .score-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .score-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 2.4rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .score-denom {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+  .score-grade {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+  .score-tagline {
+    font-size: 14px;
+    color: var(--muted);
+    max-width: 320px;
+    margin: 0 auto;
+  }
+
+  /* NUTRIENT BARS */
+  .nutrient-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  @media (max-width: 480px) { .nutrient-grid { grid-template-columns: 1fr; } }
+
+  .nutrient-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.1rem;
+  }
+  .nutrient-label {
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 0.25rem;
+  }
+  .nutrient-val {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: 'Space Mono', monospace;
+    line-height: 1.1;
+    margin-bottom: 0.4rem;
+  }
+  .nutrient-bar-bg {
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .nutrient-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s ease;
+  }
+  .nutrient-note {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 0.3rem;
+  }
+
+  /* BREAKDOWN SECTION */
+  .breakdown-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .breakdown-title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .breakdown-title .icon { font-size: 1rem; }
+
+  /* VERDICT PILLS */
+  .verdict-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .verdict-pill {
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+  .pill-good { background: var(--green-light); color: var(--green); }
+  .pill-bad { background: var(--red-light); color: var(--red); }
+  .pill-ok { background: var(--yellow-light); color: var(--yellow); }
+
+  /* PHAB COMPARISON */
+  .phab-cta {
+    background: linear-gradient(135deg, #1a1208 0%, #2d1a08 100%);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    color: white;
+    margin-bottom: 1rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .phab-cta::after {
+    content: 'PHAB';
+    position: absolute;
+    right: -0.5rem;
+    top: 50%;
+    transform: translateY(-50%) rotate(90deg);
+    font-family: 'Space Mono', monospace;
+    font-size: 4rem;
+    font-weight: 700;
+    color: rgba(232,84,26,0.15);
+    letter-spacing: -0.05em;
+    pointer-events: none;
+  }
+  .phab-cta-head {
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+    color: var(--phab);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+  }
+  .phab-cta h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    line-height: 1.2;
+  }
+  .phab-compare-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  .compare-col {
+    background: rgba(255,255,255,0.06);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem;
+    font-size: 12px;
+  }
+  .compare-col-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.3rem;
+  }
+  .compare-col-val { font-weight: 700; font-size: 1.1rem; }
+  .compare-vs {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
+    text-align: center;
+  }
+  .phab-score-boost {
+    display: inline-block;
+    background: var(--phab);
+    color: white;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  /* SHARE ROW */
+  .share-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+  .share-btn {
+    padding: 0.75rem;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    color: var(--text);
+  }
+  .share-btn:hover { border-color: var(--phab); color: var(--phab); background: var(--phab-light); }
+  .share-btn.primary {
+    background: var(--phab);
+    border-color: var(--phab);
+    color: white;
+  }
+  .share-btn.primary:hover { background: var(--phab-dark); }
+
+  /* LEADERBOARD PAGE */
+  .leaderboard-wrap {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+  .lb-header {
+    margin-bottom: 2rem;
+  }
+  .lb-header h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.02em;
+  }
+  .lb-header p { color: var(--muted); font-size: 14px; }
+
+  .lb-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.25rem;
+  }
+  .lb-tab {
+    flex: 1;
+    padding: 0.5rem;
+    text-align: center;
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    color: var(--muted);
+    background: none;
+    border: none;
+  }
+  .lb-tab.active { background: var(--phab); color: white; }
+
+  .lb-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+  .lb-row {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    gap: 1rem;
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-row:hover { background: var(--surface2); }
+  .lb-rank {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    width: 32px;
+    text-align: center;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .lb-rank.gold { color: #c9a227; }
+  .lb-rank.silver { color: #8a9099; }
+  .lb-rank.bronze { color: #a0614a; }
+  .lb-city-info { flex: 1; }
+  .lb-city-name {
+    font-weight: 600;
+    font-size: 15px;
+  }
+  .lb-city-meta {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+  .lb-score-col { text-align: right; }
+  .lb-score-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.3rem;
+    font-weight: 700;
+  }
+  .lb-score-label {
+    font-size: 10px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+  .lb-bar-wrap {
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    margin-top: 0.4rem;
+    overflow: hidden;
+  }
+  .lb-bar { height: 100%; border-radius: 2px; background: var(--phab); }
+
+  /* TREND INDICATOR */
+  .trend-up { color: var(--green); font-size: 11px; font-family: 'Space Mono', monospace; }
+  .trend-down { color: var(--red); font-size: 11px; font-family: 'Space Mono', monospace; }
+
+  /* ABOUT PAGE */
+  .about-wrap {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+  .about-wrap h2 { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; letter-spacing: -0.02em; }
+  .about-wrap p { color: var(--muted); margin-bottom: 1rem; font-size: 15px; }
+
+  .index-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin: 1.5rem 0;
+  }
+  @media (max-width: 480px) { .index-grid { grid-template-columns: 1fr; } }
+
+  .index-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1.1rem;
+  }
+  .index-card h4 {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .index-card p { font-size: 12px; color: var(--muted); margin: 0; }
+  .index-weight {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--phab);
+    background: var(--phab-light);
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+  }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    padding: 2rem;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    border-top: 1px solid var(--border);
+    margin-top: 2rem;
+  }
+  .footer a { color: var(--phab); text-decoration: none; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--text);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 100px;
+    font-size: 13px;
+    font-family: 'Space Mono', monospace;
+    transition: transform 0.35s ease;
+    z-index: 999;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* SCAN COUNT BADGE */
+  .scan-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 0.3rem 0.75rem;
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+  }
+  .scan-badge .dot {
+    width: 6px; height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .try-again-btn {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.65rem 1.5rem;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .try-again-btn:hover { border-color: var(--phab); color: var(--phab); }
+
+  /* SCORE COLORS */
+  .score-great { color: var(--score-great); }
+  .score-ok { color: var(--score-ok); }
+  .score-bad { color: var(--score-bad); }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Nutri<span>IQ</span></div>
+  <div class="nav-right">
+    <button class="nav-tab active" onclick="showPage('scan')">📸 Scan</button>
+    <button class="nav-tab" onclick="showPage('leaderboard')">🏆 Cities</button>
+    <button class="nav-tab" onclick="showPage('about')">📐 Index</button>
+  </div>
+</nav>
+
+<!-- SCAN PAGE -->
+<div class="page active" id="page-scan">
+  <div class="hero">
+    <div class="hero-eyebrow">Powered by Phab × AI</div>
+    <h1>What is your food<br><em>actually</em> doing to you?</h1>
+    <p class="hero-sub">Scan any nutrition label. Get a science-backed NutriIQ score. See how your city eats.</p>
+    <div class="scan-badge">
+      <span class="dot"></span>
+      <span id="scan-count">2,847 scans today · 14 cities competing</span>
+    </div>
+  </div>
+
+  <div style="max-width:520px; margin:0 auto 1rem; padding:0 1rem;">
+    <div class="city-select-wrap">
+      <select id="city-select">
+        <option value="">📍 Select your city</option>
+        <option>Mumbai</option>
+        <option>Delhi</option>
+        <option>Bengaluru</option>
+        <option>Hyderabad</option>
+        <option>Chennai</option>
+        <option>Pune</option>
+        <option>Ahmedabad</option>
+        <option>Kolkata</option>
+        <option>Jaipur</option>
+        <option>Lucknow</option>
+        <option>Chandigarh</option>
+        <option>Surat</option>
+        <option>Indore</option>
+        <option>Nagpur</option>
+        <option>Other</option>
+      </select>
+    </div>
+  </div>
+
+  <div style="max-width:520px; margin:0 auto; padding:0 1rem;">
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" id="file-input" accept="image/*" capture="environment">
+      <span class="upload-icon">📷</span>
+      <div class="upload-label">Take a photo or upload image</div>
+      <div class="upload-hint">Nutrition label · back of pack · any food</div>
+    </div>
+  </div>
+
+  <div class="img-preview" id="img-preview">
+    <img id="preview-img" src="" alt="Uploaded label">
+  </div>
+
+  <div style="text-align:center; padding:0 1rem 1rem;">
+    <button class="btn-analyze" id="analyze-btn" onclick="analyzeImage()" disabled>
+      Analyse this food →
+    </button>
+  </div>
+
+  <div class="loading-state" id="loading-state">
+    <div class="loading-spinner"></div>
+    <div class="loading-steps">
+      <div class="loading-step" id="step-1">🔍 Reading nutrition label...</div>
+      <div class="loading-step" id="step-2">⚗️ Calculating NutriIQ score...</div>
+      <div class="loading-step" id="step-3">🧬 Analysing ingredient quality...</div>
+      <div class="loading-step" id="step-4">📊 Updating city leaderboard...</div>
+    </div>
+  </div>
+
+  <div class="results-wrap" id="results-wrap">
+    <!-- Filled by JS -->
+  </div>
+</div>
+
+<!-- LEADERBOARD PAGE -->
+<div class="page" id="page-leaderboard">
+  <div class="leaderboard-wrap">
+    <div class="lb-header">
+      <h2>🏆 City Leaderboard</h2>
+      <p>Which city eats the smartest? Updated in real-time as people scan.</p>
+    </div>
+
+    <div class="lb-tabs">
+      <button class="lb-tab active" onclick="switchLbTab('overall', this)">Overall NutriIQ</button>
+      <button class="lb-tab" onclick="switchLbTab('protein', this)">Protein Score</button>
+      <button class="lb-tab" onclick="switchLbTab('sugar', this)">Sugar Avoidance</button>
+    </div>
+
+    <div class="lb-card" id="lb-content">
+      <!-- Filled by JS -->
+    </div>
+
+    <div style="margin-top:1.5rem; padding:1rem 1.25rem; background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); font-size:13px; color:var(--muted);">
+      <strong style="color:var(--text);">How scoring works:</strong> Each city's score is the rolling 7-day average of all NutriIQ scans by users who selected that city. Min 10 scans to appear. Scores update every 15 minutes.
+    </div>
+  </div>
+</div>
+
+<!-- ABOUT PAGE -->
+<div class="page" id="page-about">
+  <div class="about-wrap">
+    <h2>📐 The NutriIQ Index</h2>
+    <p>NutriIQ is a composite score (0–100) that measures how well a food serves your body, not just its macros. Designed by Phab's nutritionist team, it weights six dimensions.</p>
+
+    <div class="index-grid">
+      <div class="index-card">
+        <h4>⚡ Protein Efficiency <span class="index-weight">30%</span></h4>
+        <p>Protein grams per 100 kcal. The single most predictive metric for satiety and muscle protein synthesis.</p>
+      </div>
+      <div class="index-card">
+        <h4>🩸 Glycaemic Load <span class="index-weight">20%</span></h4>
+        <p>How sharply this food spikes blood sugar. Penalises high-GI carbs relative to fibre content.</p>
+      </div>
+      <div class="index-card">
+        <h4>🧂 Additive Penalty <span class="index-weight">20%</span></h4>
+        <p>Deductions for artificial sweeteners, preservatives, emulsifiers, and added sugar above 5g/100g.</p>
+      </div>
+      <div class="index-card">
+        <h4>🥑 Fat Quality <span class="index-weight">15%</span></h4>
+        <p>Ratio of unsaturated to saturated fat, with trans fat triggering a hard penalty.</p>
+      </div>
+      <div class="index-card">
+        <h4>🌾 Fibre Bonus <span class="index-weight">10%</span></h4>
+        <p>Rewards dietary fibre ≥5g per serving, critical for gut health and sustained energy.</p>
+      </div>
+      <div class="index-card">
+        <h4>📦 Ingredient Transparency <span class="index-weight">5%</span></h4>
+        <p>Shorter ingredient lists with recognisable names score higher. Rewards clean labels.</p>
+      </div>
+    </div>
+
+    <div style="background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); padding:1.25rem; margin-top:0.5rem;">
+      <h4 style="margin-bottom:0.75rem; font-size:14px;">Score Bands</h4>
+      <div style="display:flex; flex-direction:column; gap:0.5rem; font-size:13px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span>🟢 <strong>75–100</strong> — Excellent</span>
+          <span style="font-family:'Space Mono',monospace; color:var(--green); font-size:12px;">eat freely</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span>🟡 <strong>50–74</strong> — Decent</span>
+          <span style="font-family:'Space Mono',monospace; color:var(--yellow); font-size:12px;">mindful portion</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span>🔴 <strong>25–49</strong> — Poor</span>
+          <span style="font-family:'Space Mono',monospace; color:var(--red); font-size:12px;">occasional treat</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span>⚫ <strong>0–24</strong> — Harmful</span>
+          <span style="font-family:'Space Mono',monospace; color:var(--red); font-size:12px;">reconsider habit</span>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top:1.5rem; font-size:13px;">NutriIQ is not a medical device. Scores are educational and should not replace clinical dietary advice. Methodology developed in collaboration with registered nutritionists.</p>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<div class="footer">
+  Built by <a href="#">Phab</a> · nutritionist-grade food intelligence · <a href="#">phab.in</a>
+</div>
+
+<script>
+// ===================== STATE =====================
+let uploadedImageBase64 = null;
+let uploadedImageType = null;
+let currentResults = null;
+let lbMode = 'overall';
+
+const DEMO_LEADERBOARD = {
+  overall: [
+    { city: 'Bengaluru', score: 68, scans: 412, trend: '+2.1', emoji: '🟢' },
+    { city: 'Pune', score: 64, scans: 287, trend: '+1.4', emoji: '🟢' },
+    { city: 'Hyderabad', score: 61, scans: 334, trend: '+0.8', emoji: '🟡' },
+    { city: 'Mumbai', score: 58, scans: 891, trend: '-0.3', emoji: '🟡' },
+    { city: 'Chandigarh', score: 57, scans: 143, trend: '+1.1', emoji: '🟡' },
+    { city: 'Ahmedabad', score: 54, scans: 201, trend: '+0.5', emoji: '🟡' },
+    { city: 'Delhi', score: 51, scans: 763, trend: '-1.2', emoji: '🟡' },
+    { city: 'Chennai', score: 49, scans: 318, trend: '+2.3', emoji: '🔴' },
+    { city: 'Kolkata', score: 46, scans: 244, trend: '-0.7', emoji: '🔴' },
+    { city: 'Jaipur', score: 44, scans: 176, trend: '+0.2', emoji: '🔴' },
+  ],
+  protein: [
+    { city: 'Bengaluru', score: 72, scans: 412, trend: '+3.1', emoji: '🟢' },
+    { city: 'Hyderabad', score: 67, scans: 334, trend: '+1.9', emoji: '🟢' },
+    { city: 'Pune', score: 65, scans: 287, trend: '+0.8', emoji: '🟢' },
+    { city: 'Mumbai', score: 61, scans: 891, trend: '-0.5', emoji: '🟡' },
+    { city: 'Delhi', score: 58, scans: 763, trend: '+0.3', emoji: '🟡' },
+    { city: 'Chandigarh', score: 56, scans: 143, trend: '+1.4', emoji: '🟡' },
+    { city: 'Ahmedabad', score: 52, scans: 201, trend: '-0.2', emoji: '🟡' },
+    { city: 'Chennai', score: 50, scans: 318, trend: '+1.8', emoji: '🟡' },
+    { city: 'Kolkata', score: 44, scans: 244, trend: '-1.1', emoji: '🔴' },
+    { city: 'Jaipur', score: 41, scans: 176, trend: '+0.6', emoji: '🔴' },
+  ],
+  sugar: [
+    { city: 'Pune', score: 71, scans: 287, trend: '+2.2', emoji: '🟢' },
+    { city: 'Bengaluru', score: 69, scans: 412, trend: '+1.1', emoji: '🟢' },
+    { city: 'Chandigarh', score: 63, scans: 143, trend: '+2.8', emoji: '🟢' },
+    { city: 'Hyderabad', score: 60, scans: 334, trend: '+0.4', emoji: '🟡' },
+    { city: 'Ahmedabad', score: 56, scans: 201, trend: '+1.3', emoji: '🟡' },
+    { city: 'Mumbai', score: 54, scans: 891, trend: '-0.8', emoji: '🟡' },
+    { city: 'Delhi', score: 48, scans: 763, trend: '-1.6', emoji: '🔴' },
+    { city: 'Chennai', score: 47, scans: 318, trend: '+2.1', emoji: '🔴' },
+    { city: 'Jaipur', score: 45, scans: 176, trend: '+0.3', emoji: '🔴' },
+    { city: 'Kolkata', score: 43, scans: 244, trend: '-0.9', emoji: '🔴' },
+  ]
+};
+
+// ===================== PAGE ROUTING =====================
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  event.target.classList.add('active');
+  if (page === 'leaderboard') renderLeaderboard();
+}
+
+// ===================== FILE UPLOAD =====================
+const fileInput = document.getElementById('file-input');
+const uploadZone = document.getElementById('upload-zone');
+
+fileInput.addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  handleFile(file);
+});
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const dataUrl = ev.target.result;
+    uploadedImageBase64 = dataUrl.split(',')[1];
+    uploadedImageType = file.type;
+
+    const preview = document.getElementById('img-preview');
+    const img = document.getElementById('preview-img');
+    img.src = dataUrl;
+    preview.classList.add('active');
+
+    document.getElementById('analyze-btn').disabled = false;
+    document.getElementById('results-wrap').classList.remove('active');
+    document.getElementById('loading-state').classList.remove('active');
+  };
+  reader.readAsDataURL(file);
+}
+
+// ===================== ANALYSIS =====================
+async function analyzeImage() {
+  if (!uploadedImageBase64) return;
+
+  const city = document.getElementById('city-select').value || 'Unspecified';
+
+  document.getElementById('analyze-btn').disabled = true;
+  document.getElementById('results-wrap').classList.remove('active');
+  document.getElementById('loading-state').classList.add('active');
+
+  // Animate loading steps
+  const steps = ['step-1', 'step-2', 'step-3', 'step-4'];
+  let stepIdx = 0;
+  const stepInterval = setInterval(() => {
+    if (stepIdx > 0) document.getElementById(steps[stepIdx-1]).classList.remove('active');
+    if (stepIdx < steps.length) {
+      document.getElementById(steps[stepIdx]).classList.add('active');
+      if (stepIdx > 0) document.getElementById(steps[stepIdx-1]).classList.add('done');
+    }
+    stepIdx++;
+    if (stepIdx >= steps.length) clearInterval(stepInterval);
+  }, 900);
+
+  try {
+    const prompt = `You are NutriIQ, a nutritional intelligence engine. Analyse this nutrition label image and return ONLY a valid JSON object with no markdown.
+
+The JSON must have this exact shape:
+{
+  "product_name": "string (product name if visible, else 'Unknown product')",
+  "per_100g": {
+    "calories": number,
+    "protein_g": number,
+    "carbs_g": number,
+    "sugar_g": number,
+    "fat_g": number,
+    "saturated_fat_g": number,
+    "fibre_g": number,
+    "sodium_mg": number
+  },
+  "ingredients_count": number (estimate from ingredients list if visible, else 0),
+  "has_artificial_additives": boolean,
+  "has_trans_fat": boolean,
+  "nutri_iq_score": number (0-100, calculated using: protein efficiency 30% + glycaemic load penalty 20% + additive penalty 20% + fat quality 15% + fibre bonus 10% + ingredient transparency 5%),
+  "score_grade": "string (Excellent / Good / Decent / Poor / Harmful)",
+  "score_color": "string (great / ok / bad — based on: great=75+, ok=50-74, bad=<50)",
+  "protein_per_100kcal": number,
+  "gl_index": number (0-100, estimated glycaemic load index),
+  "verdicts": {
+    "good": ["array of 2-3 positive findings, specific and data-driven"],
+    "bad": ["array of 2-3 negative findings, specific and data-driven"],
+    "neutral": ["array of 1-2 neutral observations"]
+  },
+  "body_impact": "string (2-3 sentences on what this food does to the body within 1-2 hours of eating)",
+  "phab_comparison": {
+    "this_protein_per_100kcal": number,
+    "phab_protein_per_100kcal": 17.5,
+    "this_sugar_per_100g": number,
+    "phab_sugar_per_100g": 0,
+    "nutri_iq_gap": number (difference between Phab score of 82 and this product's score, positive means Phab is better)
+  },
+  "not_a_food_label": boolean (true if image does not appear to be a nutrition label)
+}
+
+Be precise. Use actual numbers from the label. If a value is not visible, use a reasonable estimate and note it.`;
+
+    const response = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageBase64: uploadedImageBase64,
+        imageType: uploadedImageType,
+        city: city
+      })
+    });
+
+    const result = await response.json();
+    clearInterval(stepInterval);
+    steps.forEach(s => { document.getElementById(s).classList.add('done'); document.getElementById(s).classList.remove('active'); });
+
+    if (result.not_a_food_label) {
+      showResults(null, city, true);
+    } else {
+      showResults(result, city, false);
+      updateScanCount();
+    }
+
+  } catch (err) {
+    clearInterval(stepInterval);
+    console.error(err);
+    showToast('⚠️ Could not read the label. Try a clearer photo.');
+    document.getElementById('loading-state').classList.remove('active');
+    document.getElementById('analyze-btn').disabled = false;
+  }
+}
+
+// ===================== RENDER RESULTS =====================
+function showResults(data, city, notLabel) {
+  document.getElementById('loading-state').classList.remove('active');
+  const wrap = document.getElementById('results-wrap');
+  wrap.classList.add('active');
+
+  if (notLabel) {
+    wrap.innerHTML = `
+      <div style="text-align:center; padding:2rem; background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); max-width:520px; margin:0 auto;">
+        <div style="font-size:3rem; margin-bottom:1rem;">🤔</div>
+        <h3 style="margin-bottom:0.5rem;">This doesn't look like a nutrition label</h3>
+        <p style="color:var(--muted); font-size:14px;">Try photographing the back of a packet — the table with protein, carbs, fat values.</p>
+        <button class="try-again-btn" onclick="resetScan()">Try again</button>
+      </div>`;
+    return;
+  }
+
+  currentResults = data;
+  const s = data;
+  const score = Math.round(s.nutri_iq_score);
+  const colorClass = s.score_color === 'great' ? 'score-great' : s.score_color === 'ok' ? 'score-ok' : 'score-bad';
+  const strokeColor = s.score_color === 'great' ? '#1a7a4a' : s.score_color === 'ok' ? '#d4820a' : '#c0392b';
+  const circumference = 2 * Math.PI * 54;
+  const dash = circumference - (score / 100) * circumference;
+
+  const goodPills = (s.verdicts.good || []).map(v => `<span class="verdict-pill pill-good">✓ ${v}</span>`).join('');
+  const badPills = (s.verdicts.bad || []).map(v => `<span class="verdict-pill pill-bad">✗ ${v}</span>`).join('');
+  const neutralPills = (s.verdicts.neutral || []).map(v => `<span class="verdict-pill pill-ok">○ ${v}</span>`).join('');
+
+  const p = s.per_100g;
+  const phabGap = s.phab_comparison.nutri_iq_gap;
+  const phabBetter = phabGap > 0;
+
+  wrap.innerHTML = `
+    <div class="score-hero" style="--score-color:${strokeColor}">
+      <div class="score-ring-wrap">
+        <svg class="score-ring" viewBox="0 0 120 120">
+          <circle class="score-ring-bg" cx="60" cy="60" r="54"/>
+          <circle class="score-ring-fill" cx="60" cy="60" r="54"
+            stroke="${strokeColor}"
+            stroke-dasharray="${circumference}"
+            stroke-dashoffset="${circumference}"
+            id="ring-fill"/>
+        </svg>
+        <div class="score-center">
+          <div class="score-num ${colorClass}">${score}</div>
+          <div class="score-denom">/100</div>
+        </div>
+      </div>
+      <div class="score-grade ${colorClass}">${s.score_grade}</div>
+      <div style="font-size:1rem; font-weight:600; margin-bottom:0.25rem;">${s.product_name}</div>
+      <div class="score-tagline">${s.body_impact}</div>
+    </div>
+
+    <div class="nutrient-grid">
+      ${nutriCard('Protein', p.protein_g + 'g', p.protein_g / 0.5, '#1a7a4a', 'per 100g · ' + s.protein_per_100kcal.toFixed(1) + 'g per 100kcal')}
+      ${nutriCard('Sugar', p.sugar_g + 'g', Math.min(p.sugar_g / 30 * 100, 100), p.sugar_g > 15 ? '#c0392b' : p.sugar_g > 5 ? '#d4820a' : '#1a7a4a', 'per 100g · ' + (p.sugar_g > 15 ? 'high' : p.sugar_g > 5 ? 'moderate' : 'low'))}
+      ${nutriCard('Calories', p.calories + ' kcal', Math.min(p.calories / 6, 100), '#4eaaff', 'per 100g')}
+      ${nutriCard('Fibre', p.fibre_g + 'g', p.fibre_g / 10 * 100, '#b87fff', 'per 100g · ' + (p.fibre_g >= 5 ? 'good' : p.fibre_g >= 2 ? 'moderate' : 'low'))}
+    </div>
+
+    <div class="breakdown-card">
+      <div class="breakdown-title"><span class="icon">🔬</span> Verdict</div>
+      <div class="verdict-row">${goodPills}${badPills}${neutralPills}</div>
+    </div>
+
+    ${phabBetter ? `
+    <div class="phab-cta">
+      <div class="phab-cta-head">Phab NutriIQ — 82/100</div>
+      <h3>This food scores ${phabGap} points lower than a Phab bar</h3>
+      <div class="phab-compare-row">
+        <div class="compare-col">
+          <div class="compare-col-label">This product</div>
+          <div class="compare-col-val">${s.phab_comparison.this_protein_per_100kcal.toFixed(1)}g</div>
+          <div style="font-size:11px; color:rgba(255,255,255,0.4); margin-top:2px;">protein / 100kcal</div>
+        </div>
+        <div class="compare-vs">vs</div>
+        <div class="compare-col" style="background:rgba(232,84,26,0.15); border:1px solid rgba(232,84,26,0.3);">
+          <div class="compare-col-label" style="color:var(--phab);">Phab bar</div>
+          <div class="compare-col-val" style="color:var(--phab);">17.5g</div>
+          <div style="font-size:11px; color:rgba(232,84,26,0.6); margin-top:2px;">protein / 100kcal</div>
+        </div>
+      </div>
+      <div style="font-size:13px; color:rgba(255,255,255,0.6);">Same snack occasion. <span class="phab-score-boost">+${phabGap} NutriIQ</span> smarter choice.</div>
+    </div>` : `
+    <div class="phab-cta">
+      <div class="phab-cta-head">Phab NutriIQ — 82/100</div>
+      <h3>You're already eating smart 🎯</h3>
+      <div style="font-size:13px; color:rgba(255,255,255,0.6);">This food scores ${Math.abs(phabGap)} points ${phabGap < 0 ? 'higher than' : 'equal to'} a Phab bar. Keep it up.</div>
+    </div>`}
+
+    <div class="share-row">
+      <button class="share-btn primary" onclick="shareResult()">
+        📤 Share my score
+      </button>
+      <button class="share-btn" onclick="shareCity('${city}', ${score})">
+        🏙️ Post to ${city || 'city'} board
+      </button>
+    </div>
+    <div style="text-align:center; margin-bottom:1rem;">
+      <button class="try-again-btn" onclick="resetScan()">← Scan another</button>
+    </div>
+  `;
+
+  // Animate ring
+  setTimeout(() => {
+    const fill = document.getElementById('ring-fill');
+    if (fill) fill.style.strokeDashoffset = dash;
+  }, 100);
+}
+
+function nutriCard(label, value, pct, color, note) {
+  const clampedPct = Math.min(Math.max(pct, 0), 100);
+  return `
+    <div class="nutrient-card">
+      <div class="nutrient-label">${label}</div>
+      <div class="nutrient-val" style="color:${color}">${value}</div>
+      <div class="nutrient-bar-bg">
+        <div class="nutrient-bar-fill" style="width:${clampedPct}%; background:${color}"></div>
+      </div>
+      <div class="nutrient-note">${note}</div>
+    </div>`;
+}
+
+// ===================== LEADERBOARD =====================
+function renderLeaderboard() {
+  const data = DEMO_LEADERBOARD[lbMode];
+  const maxScore = data[0].score;
+  const lb = document.getElementById('lb-content');
+  lb.innerHTML = data.map((row, i) => {
+    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+    const trendPos = parseFloat(row.trend) >= 0;
+    const trendClass = trendPos ? 'trend-up' : 'trend-down';
+    const trendArrow = trendPos ? '↑' : '↓';
+    const barPct = (row.score / maxScore) * 100;
+    return `
+      <div class="lb-row">
+        <div class="lb-rank ${rankClass}">${rankLabel}</div>
+        <div class="lb-city-info">
+          <div class="lb-city-name">${row.city}</div>
+          <div class="lb-city-meta">${row.scans.toLocaleString()} scans · <span class="${trendClass}">${trendArrow} ${Math.abs(row.trend)} 7d</span></div>
+          <div class="lb-bar-wrap"><div class="lb-bar" style="width:${barPct}%"></div></div>
+        </div>
+        <div class="lb-score-col">
+          <div class="lb-score-val">${row.score}</div>
+          <div class="lb-score-label">NutriIQ</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function switchLbTab(mode, el) {
+  lbMode = mode;
+  document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderLeaderboard();
+}
+
+// ===================== MISC =====================
+function resetScan() {
+  uploadedImageBase64 = null;
+  document.getElementById('img-preview').classList.remove('active');
+  document.getElementById('results-wrap').classList.remove('active');
+  document.getElementById('results-wrap').innerHTML = '';
+  document.getElementById('analyze-btn').disabled = true;
+  document.getElementById('file-input').value = '';
+  document.querySelectorAll('.loading-step').forEach(s => { s.classList.remove('active', 'done'); });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function shareResult() {
+  if (!currentResults) return;
+  const score = Math.round(currentResults.nutri_iq_score);
+  const text = `My ${currentResults.product_name} scored ${score}/100 on the NutriIQ scale 🔬\n\nHow does your snack compare? scan.phab.in\n\n#NutriIQ #Phab #WhatReallyIsInYourFood`;
+  if (navigator.share) {
+    navigator.share({ title: 'My NutriIQ Score', text });
+  } else {
+    navigator.clipboard.writeText(text);
+    showToast('✓ Copied to clipboard!');
+  }
+}
+
+function shareCity(city, score) {
+  showToast(`✓ Score posted to ${city || 'city'} leaderboard!`);
+  // In production: POST to backend, update city rolling avg
+}
+
+function updateScanCount() {
+  const el = document.getElementById('scan-count');
+  const current = parseInt(el.textContent.replace(/,/g, ''));
+  el.textContent = `${(current + 1).toLocaleString()} scans today · 14 cities competing`;
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// Init leaderboard
+renderLeaderboard();
+</script>
+</body>
+</html>

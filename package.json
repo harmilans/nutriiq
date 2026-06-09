@@ -1,0 +1,17 @@
+{
+  "name": "phab-nutriscore",
+  "version": "1.0.0",
+  "description": "NutriIQ by Phab — food label scanner with city leaderboards",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "@vercel/kv": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
