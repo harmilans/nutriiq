@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1060,14 +1061,6 @@
 </div>
 
 <script>
-// Supabase public config — loaded from /api/config on first feed open
-window.SUPABASE_URL = '';
-window.SUPABASE_ANON_KEY = '';
-fetch('/api/config').then(r => r.json()).then(d => {
-  window.SUPABASE_URL = d.supabaseUrl || '';
-  window.SUPABASE_ANON_KEY = d.supabaseAnonKey || '';
-}).catch(() => {});
-
 // ===================== STATE =====================
 let uploadedImageBase64 = null;
 let uploadedImageType = null;
@@ -1480,30 +1473,21 @@ function timeAgo(iso) {
 }
 
 async function fetchFeed() {
-  const SUPABASE_URL = window.SUPABASE_URL || '';
-  const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '';
-
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    document.getElementById('feed-content').innerHTML = `
-      <div style="text-align:center; padding:3rem; color:var(--muted); font-size:14px;">
-        <div style="font-size:2rem; margin-bottom:1rem;">🔌</div>
-        <strong>Supabase not connected</strong><br>
-        Add <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> as env vars in Vercel.
-      </div>`;
-    return;
-  }
-
   try {
-    // Fetch recent 50 scans
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/scans?select=id,created_at,city,product_name,nutri_iq_score,tier_label,protein_per_100kcal,sugar_per_100g,has_artificial_additives&order=created_at.desc&limit=50`, {
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-      }
-    });
+    const res = await fetch('/api/feed');
+    const json = await res.json();
 
-    if (!res.ok) throw new Error('Fetch failed');
-    const rows = await res.json();
+    if (!json.ok) {
+      document.getElementById('feed-content').innerHTML = `
+        <div style="text-align:center; padding:3rem; color:var(--muted); font-size:14px;">
+          <div style="font-size:2rem; margin-bottom:1rem;">🔌</div>
+          <strong>Not connected</strong><br>
+          ${json.error || 'Check SUPABASE_URL and SUPABASE_SERVICE_KEY in Vercel.'}
+        </div>`;
+      return;
+    }
+
+    const rows = json.data || [];
 
     // Stats
     const total = rows.length;
