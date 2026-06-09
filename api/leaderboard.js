@@ -1,12 +1,24 @@
-// api/leaderboard.js
-// Returns rolling 7-day city leaderboard from Supabase — direct query, no RPC
+// api/leaderboard.js — City leaderboard with security hardening
+
+import { setSecurityHeaders, isRateLimited, getIp, validateLeaderboardMode } from './_security.js';
 
 const CACHE_SECONDS = 60;
 
 export default async function handler(req, res) {
-  const mode = req.query?.mode || 'overall'; // overall | protein | sugar
-
+  setSecurityHeaders(res);
   res.setHeader('Cache-Control', `public, s-maxage=${CACHE_SECONDS}, stale-while-revalidate=60`);
+
+  if (req.method !== 'GET') return res.status(405).json({ error: 'GET only' });
+
+  const ip = getIp(req);
+  if (isRateLimited(`leaderboard:${ip}`, 30, 60 * 1000)) {
+    return res.status(429).json({ error: 'Too many requests' });
+  }
+
+  const rawMode = req.query?.mode || 'overall';
+  const modeErr = validateLeaderboardMode(rawMode);
+  if (modeErr) return res.status(400).json({ error: modeErr });
+  const mode = rawMode;
 
   try {
     const { createClient } = await import('@supabase/supabase-js');
@@ -17,7 +29,6 @@ export default async function handler(req, res) {
 
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-    // Fetch all scans with a city in the last 7 days
     const { data: scans, error } = await supabase
       .from('scans')
       .select('city, nutri_iq_score, protein_per_100kcal, sugar_per_100g')
@@ -26,7 +37,6 @@ export default async function handler(req, res) {
 
     if (error) throw error;
 
-    // Group by city in JS
     const cityMap = {};
     for (const row of scans || []) {
       if (!row.city) continue;
@@ -58,6 +68,6 @@ export default async function handler(req, res) {
 
   } catch (err) {
     console.error('Leaderboard error:', err);
-    return res.status(500).json({ ok: false, error: err.message });
+    return res.status(500).json({ ok: false, error: 'Internal error' });
   }
 }
