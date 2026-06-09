@@ -870,7 +870,7 @@
     <p class="hero-sub">Scan any nutrition label. Get a science-backed NutriIQ score. See how your city eats.</p>
     <div class="scan-badge">
       <span class="dot"></span>
-      <span id="scan-count">2,847 scans today · 14 cities competing</span>
+      <span id="scan-count">Be the first to scan today</span>
     </div>
   </div>
 
@@ -967,13 +967,12 @@
       <div class="feed-stat"><span id="feed-avg">—</span><small>avg NutriIQ</small></div>
       <div class="feed-stat"><span id="feed-today">—</span><small>today</small></div>
     </div>
+    <div style="text-align:right; margin-bottom:0.75rem;">
+      <button onclick="exportFeedCSV()" style="background:var(--surface); border:1.5px solid var(--border); border-radius:8px; padding:6px 16px; font-size:13px; cursor:pointer; font-family:inherit;">⬇ Export CSV</button>
+    </div>
     <div id="feed-content">
       <div class="feed-loading">Loading feed…</div>
     </div>
-    <details id="debug-panel" style="margin-top:2rem; background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:1rem; font-size:12px; font-family:'Space Mono',monospace;">
-      <summary style="cursor:pointer; font-weight:600; color:var(--muted);">🔧 Debug Info</summary>
-      <div id="debug-content" style="margin-top:0.75rem; line-height:2;"></div>
-    </details>
   </div>
 </div>
 
@@ -1052,44 +1051,6 @@ let uploadedImageType = null;
 let currentResults = null;
 let lbMode = 'overall';
 
-const DEMO_LEADERBOARD = {
-  overall: [
-    { city: 'Bengaluru', score: 68, scans: 412, trend: '+2.1', emoji: '🟢' },
-    { city: 'Pune', score: 64, scans: 287, trend: '+1.4', emoji: '🟢' },
-    { city: 'Hyderabad', score: 61, scans: 334, trend: '+0.8', emoji: '🟡' },
-    { city: 'Mumbai', score: 58, scans: 891, trend: '-0.3', emoji: '🟡' },
-    { city: 'Chandigarh', score: 57, scans: 143, trend: '+1.1', emoji: '🟡' },
-    { city: 'Ahmedabad', score: 54, scans: 201, trend: '+0.5', emoji: '🟡' },
-    { city: 'Delhi', score: 51, scans: 763, trend: '-1.2', emoji: '🟡' },
-    { city: 'Chennai', score: 49, scans: 318, trend: '+2.3', emoji: '🔴' },
-    { city: 'Kolkata', score: 46, scans: 244, trend: '-0.7', emoji: '🔴' },
-    { city: 'Jaipur', score: 44, scans: 176, trend: '+0.2', emoji: '🔴' },
-  ],
-  protein: [
-    { city: 'Bengaluru', score: 72, scans: 412, trend: '+3.1', emoji: '🟢' },
-    { city: 'Hyderabad', score: 67, scans: 334, trend: '+1.9', emoji: '🟢' },
-    { city: 'Pune', score: 65, scans: 287, trend: '+0.8', emoji: '🟢' },
-    { city: 'Mumbai', score: 61, scans: 891, trend: '-0.5', emoji: '🟡' },
-    { city: 'Delhi', score: 58, scans: 763, trend: '+0.3', emoji: '🟡' },
-    { city: 'Chandigarh', score: 56, scans: 143, trend: '+1.4', emoji: '🟡' },
-    { city: 'Ahmedabad', score: 52, scans: 201, trend: '-0.2', emoji: '🟡' },
-    { city: 'Chennai', score: 50, scans: 318, trend: '+1.8', emoji: '🟡' },
-    { city: 'Kolkata', score: 44, scans: 244, trend: '-1.1', emoji: '🔴' },
-    { city: 'Jaipur', score: 41, scans: 176, trend: '+0.6', emoji: '🔴' },
-  ],
-  sugar: [
-    { city: 'Pune', score: 71, scans: 287, trend: '+2.2', emoji: '🟢' },
-    { city: 'Bengaluru', score: 69, scans: 412, trend: '+1.1', emoji: '🟢' },
-    { city: 'Chandigarh', score: 63, scans: 143, trend: '+2.8', emoji: '🟢' },
-    { city: 'Hyderabad', score: 60, scans: 334, trend: '+0.4', emoji: '🟡' },
-    { city: 'Ahmedabad', score: 56, scans: 201, trend: '+1.3', emoji: '🟡' },
-    { city: 'Mumbai', score: 54, scans: 891, trend: '-0.8', emoji: '🟡' },
-    { city: 'Delhi', score: 48, scans: 763, trend: '-1.6', emoji: '🔴' },
-    { city: 'Chennai', score: 47, scans: 318, trend: '+2.1', emoji: '🔴' },
-    { city: 'Jaipur', score: 45, scans: 176, trend: '+0.3', emoji: '🔴' },
-    { city: 'Kolkata', score: 43, scans: 244, trend: '-0.9', emoji: '🔴' },
-  ]
-};
 
 // ===================== PAGE ROUTING =====================
 function showPage(page) {
@@ -1359,31 +1320,50 @@ function nutriCard(label, value, pct, color, note) {
 }
 
 // ===================== LEADERBOARD =====================
-function renderLeaderboard() {
-  const data = DEMO_LEADERBOARD[lbMode];
-  const maxScore = data[0].score;
+async function renderLeaderboard() {
   const lb = document.getElementById('lb-content');
-  lb.innerHTML = data.map((row, i) => {
-    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-    const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
-    const trendPos = parseFloat(row.trend) >= 0;
-    const trendClass = trendPos ? 'trend-up' : 'trend-down';
-    const trendArrow = trendPos ? '↑' : '↓';
-    const barPct = (row.score / maxScore) * 100;
-    return `
-      <div class="lb-row">
-        <div class="lb-rank ${rankClass}">${rankLabel}</div>
-        <div class="lb-city-info">
-          <div class="lb-city-name">${row.city}</div>
-          <div class="lb-city-meta">${row.scans.toLocaleString()} scans · <span class="${trendClass}">${trendArrow} ${Math.abs(row.trend)} 7d</span></div>
-          <div class="lb-bar-wrap"><div class="lb-bar" style="width:${barPct}%"></div></div>
-        </div>
-        <div class="lb-score-col">
-          <div class="lb-score-val">${row.score}</div>
-          <div class="lb-score-label">NutriIQ</div>
-        </div>
-      </div>`;
-  }).join('');
+  lb.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--muted);font-size:14px;">Loading…</div>`;
+
+  try {
+    const res = await fetch(`/api/leaderboard?mode=${lbMode}`);
+    const json = await res.json();
+    const data = json.data || [];
+
+    if (!data.length) {
+      lb.innerHTML = `
+        <div style="text-align:center;padding:3rem;color:var(--muted);font-size:14px;">
+          <div style="font-size:2rem;margin-bottom:0.75rem;">🏙️</div>
+          <strong>No city data yet</strong><br>
+          Cities appear once they hit 10 scans. Start scanning!
+        </div>`;
+      return;
+    }
+
+    const maxScore = data[0].avg_score;
+    lb.innerHTML = data.map((row, i) => {
+      const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+      const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+      const trend = parseFloat(row.trend_7d) || 0;
+      const trendClass = trend >= 0 ? 'trend-up' : 'trend-down';
+      const trendArrow = trend >= 0 ? '↑' : '↓';
+      const barPct = (row.avg_score / maxScore) * 100;
+      return `
+        <div class="lb-row">
+          <div class="lb-rank ${rankClass}">${rankLabel}</div>
+          <div class="lb-city-info">
+            <div class="lb-city-name">${row.city}</div>
+            <div class="lb-city-meta">${row.scan_count.toLocaleString()} scans · <span class="${trendClass}">${trendArrow} ${Math.abs(trend)} 7d</span></div>
+            <div class="lb-bar-wrap"><div class="lb-bar" style="width:${barPct}%"></div></div>
+          </div>
+          <div class="lb-score-col">
+            <div class="lb-score-val">${row.avg_score}</div>
+            <div class="lb-score-label">NutriIQ</div>
+          </div>
+        </div>`;
+    }).join('');
+  } catch (err) {
+    lb.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--muted);font-size:13px;">Could not load leaderboard.</div>`;
+  }
 }
 
 function switchLbTab(mode, el) {
@@ -1422,11 +1402,22 @@ function shareCity(city, score) {
   // In production: POST to backend, update city rolling avg
 }
 
-function updateScanCount() {
-  const el = document.getElementById('scan-count');
-  const current = parseInt(el.textContent.replace(/,/g, ''));
-  el.textContent = `${(current + 1).toLocaleString()} scans today · 14 cities competing`;
+async function updateScanCount() {
+  try {
+    const res = await fetch('/api/feed');
+    const json = await res.json();
+    if (!json.ok || !json.data) return;
+    const today = json.data.filter(r => new Date(r.created_at).toDateString() === new Date().toDateString()).length;
+    const cities = new Set(json.data.map(r => r.city).filter(Boolean)).size;
+    const el = document.getElementById('scan-count');
+    if (today > 0) {
+      el.textContent = `${today.toLocaleString()} scan${today !== 1 ? 's' : ''} today · ${cities} cit${cities !== 1 ? 'ies' : 'y'} competing`;
+    }
+  } catch (_) {}
 }
+
+// Load scan count on page start
+updateScanCount();
 
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -1457,32 +1448,25 @@ function timeAgo(iso) {
   return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
-async function fetchFeed() {
-  const dbg = document.getElementById('debug-content');
+let _lastFeedRows = [];
 
+async function fetchFeed() {
   try {
     const res = await fetch('/api/feed');
     const json = await res.json();
-
-    if (dbg) {
-      dbg.innerHTML = `
-        <div><b>/api/feed status:</b> ${res.status} ${res.ok ? '✓' : '✗'}</div>
-        <div><b>ok:</b> ${json.ok}</div>
-        <div><b>rows returned:</b> ${json.data ? json.data.length : 'n/a'}</div>
-        ${json.error ? `<div style="color:var(--red)"><b>error:</b> ${json.error}</div>` : ''}`;
-    }
 
     if (!json.ok) {
       document.getElementById('feed-content').innerHTML = `
         <div style="text-align:center; padding:3rem; color:var(--muted); font-size:14px;">
           <div style="font-size:2rem; margin-bottom:1rem;">🔌</div>
-          <strong>Supabase not connected</strong><br>
-          ${json.error || 'Check debug panel below.'}
+          <strong>Not connected</strong><br>
+          ${json.error || 'Check Supabase env vars in Vercel.'}
         </div>`;
       return;
     }
 
     const rows = json.data || [];
+    _lastFeedRows = rows;
 
     // Stats
     const total = rows.length;
@@ -1545,6 +1529,34 @@ function initFeed() {
   if (!feedInterval) {
     feedInterval = setInterval(fetchFeed, 30000);
   }
+}
+
+function exportFeedCSV() {
+  if (!_lastFeedRows.length) {
+    showToast('No data to export yet.');
+    return;
+  }
+  const headers = ['Time', 'Product', 'City', 'NutriIQ Score', 'Tier', 'Protein/100kcal', 'Sugar/100g', 'Artificial Additives'];
+  const rows = _lastFeedRows.map(r => [
+    new Date(r.created_at).toISOString(),
+    `"${(r.product_name || '').replace(/"/g, '""')}"`,
+    r.city || '',
+    r.nutri_iq_score ?? '',
+    (r.tier_label || '').replace(/_/g, ' '),
+    r.protein_per_100kcal != null ? r.protein_per_100kcal.toFixed(1) : '',
+    r.sugar_per_100g != null ? r.sugar_per_100g.toFixed(1) : '',
+    r.has_artificial_additives ? 'Yes' : 'No'
+  ].join(','));
+
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `nutriiq-scans-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✓ CSV exported');
 }
 </script>
 </body>
