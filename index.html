@@ -1204,6 +1204,17 @@
       <button class="lb-tab" onclick="switchLbTab('sugar', this)">Sugar Avoidance</button>
     </div>
 
+    <div id="lb-tab-desc" style="margin-bottom:1rem; padding:0.75rem 1.1rem; background:var(--phab-light); border-radius:10px; font-size:13px; color:var(--text); line-height:1.5;"></div>
+
+    <!-- Phab benchmark banner -->
+    <div id="lb-benchmark" style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem; padding:0.75rem 1.1rem; background:#fff; border:1.5px solid var(--phab); border-radius:10px; font-size:13px;">
+      <span style="font-size:1.4rem;">🏅</span>
+      <div>
+        <strong style="color:var(--phab);" id="lb-bench-label">Phab bar benchmark: 82 / 100</strong><br>
+        <span style="color:var(--muted);" id="lb-bench-sub">Cities above this line eat smarter than a Phab bar on average.</span>
+      </div>
+    </div>
+
     <div class="lb-card" id="lb-content">
       <!-- Filled by JS -->
     </div>
@@ -1307,7 +1318,7 @@
 </div>
 
 <div class="footer">
-  Built by <a href="#">Phab</a> · nutritionist-grade food intelligence · <a href="#">phab.in</a>
+  Built by <a href="https://www.getphab.com" target="_blank" rel="noopener">Phab</a> · nutritionist-grade food intelligence · <a href="https://www.getphab.com" target="_blank" rel="noopener">getphab.com</a>
 </div>
 
 <script>
@@ -1637,7 +1648,7 @@ function showResults(data, city, notLabel) {
         </div>
       </div>
       <div style="font-size:13px; color:rgba(255,255,255,0.75); margin-bottom:1rem;">Same snack occasion. <span class="phab-score-boost">+${phabGap} NutriIQ</span> smarter choice.</div>
-      <a href="https://www.phab.in/collections/protein-bars" target="_blank" rel="noopener"
+      <a href="https://www.getphab.com/collections/protein-bar" target="_blank" rel="noopener"
         style="display:block; background:#fff; color:#00B4C8; font-weight:700; font-size:14px; text-align:center; padding:0.75rem 1rem; border-radius:8px; text-decoration:none; letter-spacing:0.02em;">
         Try a Phab bar →
       </a>
@@ -1646,7 +1657,7 @@ function showResults(data, city, notLabel) {
       <div class="phab-cta-head">Phab NutriIQ — 82/100</div>
       <h3>You're already eating smart 🎯</h3>
       <div style="font-size:13px; color:rgba(255,255,255,0.75); margin-bottom:1rem;">This food scores ${Math.abs(phabGap)} points ${phabGap < 0 ? 'higher than' : 'equal to'} a Phab bar. Keep it up.</div>
-      <a href="https://www.phab.in/collections/protein-bars" target="_blank" rel="noopener"
+      <a href="https://www.getphab.com/collections/protein-bar" target="_blank" rel="noopener"
         style="display:block; background:#fff; color:#00B4C8; font-weight:700; font-size:14px; text-align:center; padding:0.75rem 1rem; border-radius:8px; text-decoration:none; letter-spacing:0.02em;">
         Shop Phab bars →
       </a>
@@ -1698,9 +1709,54 @@ function nutriCard(label, value, pct, color, note) {
 }
 
 // ===================== LEADERBOARD =====================
+const LB_META = {
+  overall: {
+    desc: '🧬 <strong>Overall NutriIQ</strong> — composite score (0–100) weighing protein efficiency, glycaemic load, additive penalty, fat quality, fibre, and label transparency. Higher = healthier food choices.',
+    phabScore: 82,
+    phabLabel: 'Phab bar benchmark: 82 / 100',
+    phabSub: 'Cities above this line eat smarter than a Phab bar on average.',
+    unit: '',
+    gradeLabel: score => score >= 75 ? '🟢 Smart' : score >= 55 ? '🟡 Average' : '🔴 Needs work',
+    vsPhabText: (score) => {
+      const diff = Math.abs(score - 82);
+      return score >= 82 ? `+${diff} above Phab 🏆` : `-${diff} below Phab`;
+    }
+  },
+  protein: {
+    desc: '💪 <strong>Protein Score</strong> — average grams of protein per 100 kcal across all scanned products. Measures how protein-efficient the city\'s food choices are. Phab bar = 17.5g / 100 kcal.',
+    phabScore: 17.5,
+    phabLabel: 'Phab bar benchmark: 17.5g protein / 100 kcal',
+    phabSub: 'Above this = eating as protein-efficiently as a Phab bar.',
+    unit: 'g/100kcal',
+    gradeLabel: score => score >= 15 ? '🟢 High protein' : score >= 8 ? '🟡 Moderate' : '🔴 Low protein',
+    vsPhabText: (score) => {
+      const diff = Math.abs(score - 17.5).toFixed(1);
+      return score >= 17.5 ? `+${diff}g above Phab 🏆` : `-${diff}g below Phab`;
+    }
+  },
+  sugar: {
+    desc: '🩸 <strong>Sugar Avoidance</strong> — how well each city avoids added sugar. Score = 100 minus average sugar per 100g. Phab bar has 0g added sugar, scoring a perfect 100.',
+    phabScore: 100,
+    phabLabel: 'Phab bar benchmark: 0g sugar → Score 100',
+    phabSub: 'Phab has zero added sugar — the gold standard.',
+    unit: '',
+    gradeLabel: score => score >= 85 ? '🟢 Sugar smart' : score >= 65 ? '🟡 Moderate' : '🔴 High sugar',
+    vsPhabText: (score) => {
+      const diff = Math.abs(score - 100);
+      return score >= 100 ? `Matches Phab 🏆` : `-${diff} pts vs Phab`;
+    }
+  }
+};
+
 async function renderLeaderboard() {
   const lb = document.getElementById('lb-content');
   lb.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:14px;">Loading…</div>';
+
+  const meta = LB_META[lbMode];
+  document.getElementById('lb-tab-desc').innerHTML = meta.desc;
+  document.getElementById('lb-bench-label').textContent = meta.phabLabel;
+  document.getElementById('lb-bench-sub').textContent = meta.phabSub;
+
   try {
     const res = await fetch(`/api/leaderboard?mode=${lbMode}`);
     const json = await res.json();
@@ -1713,25 +1769,39 @@ async function renderLeaderboard() {
       return;
     }
     const data = json.data;
-    const maxScore = data[0].avg_score;
+    const maxScore = Math.max(data[0].avg_score, meta.phabScore);
     lb.innerHTML = data.map((row, i) => {
       const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
       const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
       const trend = parseFloat(row.trend_7d) || 0;
       const trendClass = trend >= 0 ? 'trend-up' : 'trend-down';
       const trendArrow = trend >= 0 ? '↑' : '↓';
-      const barPct = (row.avg_score / maxScore) * 100;
+      const barPct = Math.min((row.avg_score / maxScore) * 100, 100);
+      const phabBarPct = Math.min((meta.phabScore / maxScore) * 100, 100);
+      const grade = meta.gradeLabel(row.avg_score);
+      const vsPhab = meta.vsPhabText(row.avg_score);
+      const vsPhabColor = row.avg_score >= meta.phabScore ? '#00B4C8' : '#e74c3c';
       return `
         <div class="lb-row">
           <div class="lb-rank ${rankClass}">${rankLabel}</div>
           <div class="lb-city-info">
-            <div class="lb-city-name">${row.city}</div>
-            <div class="lb-city-meta">${Number(row.scan_count).toLocaleString()} scans · <span class="${trendClass}">${trendArrow} ${Math.abs(trend).toFixed(1)} 7d</span></div>
-            <div class="lb-bar-wrap"><div class="lb-bar" style="width:${barPct}%"></div></div>
+            <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+              <div class="lb-city-name">${row.city}</div>
+              <span style="font-size:11px;background:var(--surface2);padding:2px 8px;border-radius:20px;color:var(--muted);">${grade}</span>
+            </div>
+            <div class="lb-city-meta">
+              ${Number(row.scan_count).toLocaleString()} scan${row.scan_count !== 1 ? 's' : ''} &nbsp;·&nbsp;
+              <span class="${trendClass}">${trendArrow} ${Math.abs(trend).toFixed(1)} vs last 7d</span> &nbsp;·&nbsp;
+              <span style="color:${vsPhabColor};font-weight:600;">${vsPhab}</span>
+            </div>
+            <div class="lb-bar-wrap" style="position:relative;">
+              <div class="lb-bar" style="width:${barPct}%"></div>
+              <div style="position:absolute;top:0;left:${phabBarPct}%;height:100%;width:2px;background:var(--phab);opacity:0.6;" title="Phab benchmark"></div>
+            </div>
           </div>
           <div class="lb-score-col">
             <div class="lb-score-val">${row.avg_score}</div>
-            <div class="lb-score-label">NutriIQ</div>
+            <div class="lb-score-label">${meta.unit || 'NutriIQ'}</div>
           </div>
         </div>`;
     }).join('');
@@ -2108,7 +2178,7 @@ function drawShareCard(canvas, data) {
 
   ctx.fillStyle = 'rgba(255,255,255,0.35)';
   ctx.font = '12px "Arial", sans-serif';
-  ctx.fillText('scan.phab.in · science-backed food intelligence', cx, H - 42);
+  ctx.fillText('getphab.com · science-backed food intelligence', cx, H - 42);
 }
 
 function shareCity(city, score) {
@@ -2303,6 +2373,10 @@ async function adminClearFeed() {
     const json = await res.json();
     if (!res.ok) { showToast('Error: ' + (json.error || res.status)); return; }
     showToast(`✅ Cleared ${json.deleted ?? 0} scan${json.deleted !== 1 ? 's' : ''} from feed.`);
+    // Immediately reset stat counters and feed
+    const el = document.getElementById('scan-count');
+    if (el) el.textContent = 'Be the first to scan today';
+    _lastFeedRows = [];
     fetchFeed();
   } catch (e) {
     showToast('Request failed: ' + e.message);
