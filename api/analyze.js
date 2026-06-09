@@ -122,9 +122,21 @@ Required shape:
       return res.status(422).json({ error: 'Could not parse nutrition data. The label may be too blurry or obscured — try a flatter, better-lit photo.' });
     }
 
-    // Persist scan to Supabase asynchronously (non-blocking)
-    if (process.env.SUPABASE_URL && !result.not_a_food_label) {
-      persistScan(result, city, ip).catch(console.error);
+    // Persist scan to Supabase
+    let persistError = null;
+    if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY && !result.not_a_food_label) {
+      try {
+        await persistScan(result, city, ip);
+        result._saved = true;
+      } catch (err) {
+        console.error('Persist error:', err);
+        persistError = err.message;
+        result._saved = false;
+        result._save_error = persistError;
+      }
+    } else if (!process.env.SUPABASE_SERVICE_KEY) {
+      result._saved = false;
+      result._save_error = 'SUPABASE_SERVICE_KEY not set in Vercel env vars';
     }
 
     return res.status(200).json(result);
