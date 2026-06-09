@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: 'Too many attempts' });
   }
 
-  const { secret } = req.body || {};
+  const { secret, _check_only } = req.body || {};
 
   if (!secret || !process.env.ADMIN_SECRET) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -24,6 +24,9 @@ export default async function handler(req, res) {
   if (!safeCompare(secret, process.env.ADMIN_SECRET)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
+
+  // Auth-check only — used by feed tab to verify secret without deleting
+  if (_check_only) return res.status(200).json({ ok: true, authed: true });
 
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
     return res.status(500).json({ error: 'Supabase not configured' });
