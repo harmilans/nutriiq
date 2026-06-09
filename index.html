@@ -601,24 +601,33 @@
     margin-bottom: 1rem;
   }
   .compare-col {
-    background: rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.15);
     border-radius: var(--radius-sm);
     padding: 0.75rem;
     font-size: 12px;
   }
+  .compare-col.phab-col {
+    background: rgba(255,255,255,0.22);
+    border: 1.5px solid rgba(255,255,255,0.5);
+  }
   .compare-col-label {
     font-family: 'Space Mono', monospace;
     font-size: 10px;
-    color: rgba(255,255,255,0.4);
+    color: rgba(255,255,255,0.7);
     text-transform: uppercase;
     letter-spacing: 0.1em;
     margin-bottom: 0.3rem;
   }
-  .compare-col-val { font-weight: 700; font-size: 1.1rem; }
+  .compare-col.phab-col .compare-col-label { color: #fff; font-weight: 700; }
+  .compare-col-val { font-weight: 700; font-size: 1.1rem; color: rgba(255,255,255,0.9); }
+  .compare-col.phab-col .compare-col-val { color: #fff; font-size: 1.3rem; }
+  .compare-col-sub { font-size: 11px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+  .compare-col.phab-col .compare-col-sub { color: rgba(255,255,255,0.85); }
   .compare-vs {
     font-family: 'Space Mono', monospace;
     font-size: 11px;
-    color: rgba(255,255,255,0.4);
+    color: rgba(255,255,255,0.6);
     text-align: center;
   }
   .phab-score-boost {
@@ -1084,23 +1093,31 @@
   </div>
 
   <div style="max-width:520px; margin:0 auto 1rem; padding:0 1rem;">
+    <!-- Auto-detected city badge -->
     <div id="city-auto-badge" style="display:none; align-items:center; gap:10px; background:var(--surface); border:1.5px solid var(--phab); border-radius:10px; padding:10px 14px;">
       <span style="font-size:18px;">📍</span>
       <div style="flex:1;">
-        <div style="font-size:13px; color:var(--muted);">Your city (auto-detected)</div>
+        <div style="font-size:12px; color:var(--muted);">Your city (auto-detected)</div>
         <div id="city-detected-name" style="font-weight:700; color:var(--text); font-size:15px;"></div>
       </div>
-      <button onclick="showCityInput()" style="font-size:12px; color:var(--phab); background:none; border:none; cursor:pointer; text-decoration:underline;">Change</button>
+      <button onclick="showCityDropdowns()" style="font-size:12px; color:var(--phab); background:none; border:none; cursor:pointer; text-decoration:underline;">Change</button>
     </div>
-    <div id="city-detecting-badge" style="display:none; align-items:center; gap:10px; background:var(--surface); border:1.5px solid var(--border); border-radius:10px; padding:10px 14px; color:var(--muted); font-size:13px;">
+    <!-- Detecting spinner -->
+    <div id="city-detecting-badge" style="display:flex; align-items:center; gap:10px; background:var(--surface); border:1.5px solid var(--border); border-radius:10px; padding:10px 14px; color:var(--muted); font-size:13px;">
       <span>📡 Detecting your city…</span>
     </div>
+    <!-- Country → City dropdowns (shown if location denied) -->
     <div id="city-manual-wrap" style="display:none;">
       <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--text);">Your city <span style="font-weight:400; color:var(--muted);">(for the leaderboard)</span></label>
-      <input type="text" id="city-manual-input" placeholder="e.g. Mumbai, Dubai, London…"
-        style="width:100%; box-sizing:border-box; padding:10px 14px; border:1.5px solid var(--phab); border-radius:10px; font-size:14px; font-family:inherit; background:var(--surface); color:var(--text); outline:none;">
+      <div style="display:flex; gap:8px;">
+        <select id="country-select" onchange="onCountryChange()" style="flex:1; padding:10px 12px; border:1.5px solid var(--phab); border-radius:10px; font-size:14px; font-family:inherit; background:var(--surface); color:var(--text); outline:none;">
+          <option value="">🌍 Country</option>
+        </select>
+        <select id="city-dropdown" onchange="onCityDropdownChange()" disabled style="flex:1; padding:10px 12px; border:1.5px solid var(--border); border-radius:10px; font-size:14px; font-family:inherit; background:var(--surface); color:var(--muted); outline:none;">
+          <option value="">City</option>
+        </select>
+      </div>
     </div>
-    <!-- Hidden field stores the final city value used at scan time -->
     <input type="hidden" id="city-value" value="">
   </div>
 
@@ -1558,6 +1575,7 @@ function showResults(data, city, notLabel) {
   const circumference = 2 * Math.PI * 54;
   const dash = circumference - (score / 100) * circumference;
 
+  const grade = s.score_grade || (score >= 85 ? 'A+' : score >= 75 ? 'A' : score >= 65 ? 'B' : score >= 50 ? 'C' : score >= 35 ? 'D' : 'F');
   const goodPills = (s.verdicts.good || []).map(v => `<span class="verdict-pill pill-good">✓ ${v}</span>`).join('');
   const badPills = (s.verdicts.bad || []).map(v => `<span class="verdict-pill pill-bad">✗ ${v}</span>`).join('');
   const neutralPills = (s.verdicts.neutral || []).map(v => `<span class="verdict-pill pill-ok">○ ${v}</span>`).join('');
@@ -1607,30 +1625,52 @@ function showResults(data, city, notLabel) {
         <div class="compare-col">
           <div class="compare-col-label">This product</div>
           <div class="compare-col-val">${s.phab_comparison.this_protein_per_100kcal.toFixed(1)}g</div>
-          <div style="font-size:11px; color:rgba(255,255,255,0.4); margin-top:2px;">protein / 100kcal</div>
+          <div class="compare-col-sub">protein / 100kcal</div>
+          <div class="compare-col-sub">${s.phab_comparison.this_sugar_per_100g?.toFixed(1)}g sugar</div>
         </div>
         <div class="compare-vs">vs</div>
-        <div class="compare-col" style="background:rgba(232,84,26,0.15); border:1px solid rgba(232,84,26,0.3);">
-          <div class="compare-col-label" style="color:var(--phab);">Phab bar</div>
-          <div class="compare-col-val" style="color:var(--phab);">17.5g</div>
-          <div style="font-size:11px; color:rgba(232,84,26,0.6); margin-top:2px;">protein / 100kcal</div>
+        <div class="compare-col phab-col">
+          <div class="compare-col-label">✦ Phab bar</div>
+          <div class="compare-col-val">17.5g</div>
+          <div class="compare-col-sub">protein / 100kcal</div>
+          <div class="compare-col-sub">0g added sugar</div>
         </div>
       </div>
-      <div style="font-size:13px; color:rgba(255,255,255,0.6);">Same snack occasion. <span class="phab-score-boost">+${phabGap} NutriIQ</span> smarter choice.</div>
+      <div style="font-size:13px; color:rgba(255,255,255,0.75); margin-bottom:1rem;">Same snack occasion. <span class="phab-score-boost">+${phabGap} NutriIQ</span> smarter choice.</div>
+      <a href="https://www.phab.in/collections/protein-bars" target="_blank" rel="noopener"
+        style="display:block; background:#fff; color:#00B4C8; font-weight:700; font-size:14px; text-align:center; padding:0.75rem 1rem; border-radius:8px; text-decoration:none; letter-spacing:0.02em;">
+        Try a Phab bar →
+      </a>
     </div>` : `
     <div class="phab-cta">
       <div class="phab-cta-head">Phab NutriIQ — 82/100</div>
       <h3>You're already eating smart 🎯</h3>
-      <div style="font-size:13px; color:rgba(255,255,255,0.6);">This food scores ${Math.abs(phabGap)} points ${phabGap < 0 ? 'higher than' : 'equal to'} a Phab bar. Keep it up.</div>
+      <div style="font-size:13px; color:rgba(255,255,255,0.75); margin-bottom:1rem;">This food scores ${Math.abs(phabGap)} points ${phabGap < 0 ? 'higher than' : 'equal to'} a Phab bar. Keep it up.</div>
+      <a href="https://www.phab.in/collections/protein-bars" target="_blank" rel="noopener"
+        style="display:block; background:#fff; color:#00B4C8; font-weight:700; font-size:14px; text-align:center; padding:0.75rem 1rem; border-radius:8px; text-decoration:none; letter-spacing:0.02em;">
+        Shop Phab bars →
+      </a>
     </div>`}
 
-    <div class="share-row">
-      <button class="share-btn primary" onclick="shareResult()">
-        📤 Share my score
-      </button>
-      <button class="share-btn" onclick="shareCity('${city}', ${score})">
-        🏙️ Post to ${city || 'city'} board
-      </button>
+    <div style="margin-bottom:1rem;">
+      <div style="font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.6rem;">Share your score</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:0.5rem; margin-bottom:0.75rem;">
+        <button class="share-btn primary" onclick="shareResult()" title="Download card">
+          📤 Card
+        </button>
+        <button class="share-btn" style="background:#25D366; border-color:#25D366; color:#fff;" onclick="shareWhatsApp('${s.product_name}', ${score}, '${grade}')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.122.554 4.118 1.528 5.847L.057 23.447a.75.75 0 00.916.928l5.713-1.498A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.925 0-3.73-.51-5.288-1.4l-.38-.223-3.94 1.033 1.05-3.836-.247-.397A9.956 9.956 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+          WA
+        </button>
+        <button class="share-btn" style="background:#000; border-color:#000; color:#fff;" onclick="shareX('${s.product_name}', ${score}, '${grade}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          X
+        </button>
+        <button class="share-btn" style="background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888); border-color:#e6683c; color:#fff;" onclick="shareInstagram('${s.product_name}', ${score}, '${grade}')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+          IG
+        </button>
+      </div>
     </div>
     <div style="text-align:center; margin-bottom:1rem;">
       <button class="try-again-btn" onclick="resetScan()">← Scan another</button>
@@ -1727,6 +1767,49 @@ function shareResult() {
 }
 
 // ===================== AUTO-DETECT CITY =====================
+const CITY_DATA = {
+  '🇮🇳 India':       ['Mumbai','Delhi','Bengaluru','Hyderabad','Chennai','Pune','Ahmedabad','Kolkata','Jaipur','Lucknow','Chandigarh','Surat','Indore','Nagpur','Gurgaon','Noida','Kochi','Bhopal','Vadodara','Visakhapatnam','Coimbatore','Patna'],
+  '🇦🇪 UAE':         ['Dubai','Abu Dhabi','Sharjah','Ajman','Ras Al Khaimah'],
+  '🇬🇧 UK':          ['London','Manchester','Birmingham','Leeds','Glasgow','Edinburgh','Bristol','Liverpool'],
+  '🇺🇸 USA':         ['New York','Los Angeles','San Francisco','Chicago','Houston','Seattle','Austin','Boston','Miami'],
+  '🇸🇬 Singapore':   ['Singapore'],
+  '🇦🇺 Australia':   ['Sydney','Melbourne','Brisbane','Perth','Adelaide'],
+  '🇨🇦 Canada':      ['Toronto','Vancouver','Montreal','Calgary','Ottawa'],
+  '🇩🇪 Germany':     ['Berlin','Munich','Hamburg','Frankfurt','Cologne'],
+  '🇫🇷 France':      ['Paris','Lyon','Marseille','Toulouse','Nice'],
+  '🇯🇵 Japan':       ['Tokyo','Osaka','Kyoto','Yokohama','Nagoya'],
+};
+
+function populateCountryDropdown() {
+  const sel = document.getElementById('country-select');
+  Object.keys(CITY_DATA).forEach(c => {
+    const o = document.createElement('option');
+    o.value = c; o.textContent = c;
+    sel.appendChild(o);
+  });
+}
+
+function onCountryChange() {
+  const country = document.getElementById('country-select').value;
+  const citySel = document.getElementById('city-dropdown');
+  citySel.innerHTML = '<option value="">Select city</option>';
+  citySel.disabled = !country;
+  citySel.style.borderColor = country ? 'var(--phab)' : 'var(--border)';
+  citySel.style.color = 'var(--text)';
+  if (country && CITY_DATA[country]) {
+    CITY_DATA[country].forEach(c => {
+      const o = document.createElement('option'); o.value = c; o.textContent = c;
+      citySel.appendChild(o);
+    });
+  }
+  document.getElementById('city-value').value = '';
+}
+
+function onCityDropdownChange() {
+  const city = document.getElementById('city-dropdown').value;
+  document.getElementById('city-value').value = city;
+}
+
 function setCity(city) {
   document.getElementById('city-value').value = city;
   document.getElementById('city-detecting-badge').style.display = 'none';
@@ -1736,22 +1819,19 @@ function setCity(city) {
   document.getElementById('city-detected-name').textContent = city;
 }
 
-function showCityInput() {
+function showCityDropdowns() {
   document.getElementById('city-auto-badge').style.display = 'none';
   document.getElementById('city-manual-wrap').style.display = 'block';
-  const input = document.getElementById('city-manual-input');
-  input.value = document.getElementById('city-value').value;
-  input.focus();
-  input.oninput = () => { document.getElementById('city-value').value = input.value.trim(); };
 }
 
 async function autoDetectCity() {
+  populateCountryDropdown();
+
   if (!navigator.geolocation) {
+    document.getElementById('city-detecting-badge').style.display = 'none';
     document.getElementById('city-manual-wrap').style.display = 'block';
     return;
   }
-
-  document.getElementById('city-detecting-badge').style.display = 'flex';
 
   navigator.geolocation.getCurrentPosition(
     async (pos) => {
@@ -1770,7 +1850,7 @@ async function autoDetectCity() {
       }
     },
     () => {
-      // Permission denied — show manual input
+      // Permission denied — show country→city dropdowns
       document.getElementById('city-detecting-badge').style.display = 'none';
       document.getElementById('city-manual-wrap').style.display = 'block';
     },
@@ -2033,7 +2113,27 @@ function drawShareCard(canvas, data) {
 
 function shareCity(city, score) {
   showToast(`✓ Score posted to ${city || 'city'} leaderboard!`);
-  // In production: POST to backend, update city rolling avg
+}
+
+function _buildShareText(product, score, grade) {
+  const url = 'https://phab-scan.vercel.app';
+  return `I scanned "${product}" and got a NutriIQ score of ${score}/100 (${grade}) 🧬\nHow does your snack score? Try it free → ${url}\n\n@phabprotein #NutriIQ #PhababProtein #WhatIsYourFoodDoingToYou`;
+}
+
+function shareWhatsApp(product, score, grade) {
+  const text = encodeURIComponent(_buildShareText(product, score, grade));
+  window.open(`https://wa.me/?text=${text}`, '_blank');
+}
+
+function shareX(product, score, grade) {
+  const text = encodeURIComponent(`I scanned "${product}" — NutriIQ score: ${score}/100 (${grade}) 🧬\nHow does your snack score? @phabprotein #NutriIQ #PhababProtein\nhttps://phab-scan.vercel.app`);
+  window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+}
+
+function shareInstagram(product, score, grade) {
+  // Instagram doesn't support deep-link sharing from web — download card instead, prompt user to post
+  shareResult();
+  setTimeout(() => showToast('📸 Card downloaded! Open Instagram and share to Stories or Feed.'), 400);
 }
 
 async function updateScanCount() {
