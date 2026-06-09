@@ -1353,47 +1353,6 @@ async function analyzeImage() {
   }, 900);
 
   try {
-    const prompt = `You are NutriIQ, a nutritional intelligence engine. Analyse this nutrition label image and return ONLY a valid JSON object with no markdown.
-
-The JSON must have this exact shape:
-{
-  "product_name": "string (product name if visible, else 'Unknown product')",
-  "per_100g": {
-    "calories": number,
-    "protein_g": number,
-    "carbs_g": number,
-    "sugar_g": number,
-    "fat_g": number,
-    "saturated_fat_g": number,
-    "fibre_g": number,
-    "sodium_mg": number
-  },
-  "ingredients_count": number (estimate from ingredients list if visible, else 0),
-  "has_artificial_additives": boolean,
-  "has_trans_fat": boolean,
-  "nutri_iq_score": number (0-100, calculated using: protein efficiency 30% + glycaemic load penalty 20% + additive penalty 20% + fat quality 15% + fibre bonus 10% + ingredient transparency 5%),
-  "score_grade": "string (Excellent / Good / Decent / Poor / Harmful)",
-  "score_color": "string (great / ok / bad — based on: great=75+, ok=50-74, bad=<50)",
-  "protein_per_100kcal": number,
-  "gl_index": number (0-100, estimated glycaemic load index),
-  "verdicts": {
-    "good": ["array of 2-3 positive findings, specific and data-driven"],
-    "bad": ["array of 2-3 negative findings, specific and data-driven"],
-    "neutral": ["array of 1-2 neutral observations"]
-  },
-  "body_impact": "string (2-3 sentences on what this food does to the body within 1-2 hours of eating)",
-  "phab_comparison": {
-    "this_protein_per_100kcal": number,
-    "phab_protein_per_100kcal": 17.5,
-    "this_sugar_per_100g": number,
-    "phab_sugar_per_100g": 0,
-    "nutri_iq_gap": number (difference between Phab score of 82 and this product's score, positive means Phab is better)
-  },
-  "not_a_food_label": boolean (true if image does not appear to be a nutrition label)
-}
-
-Be precise. Use actual numbers from the label. If a value is not visible, use a reasonable estimate and note it.`;
-
     const response = await fetch('/api/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1408,6 +1367,14 @@ Be precise. Use actual numbers from the label. If a value is not visible, use a 
     clearInterval(stepInterval);
     steps.forEach(s => { document.getElementById(s).classList.add('done'); document.getElementById(s).classList.remove('active'); });
 
+    if (!response.ok || result.error) {
+      const msg = result.error || 'Something went wrong. Please try again.';
+      showToast('⚠️ ' + msg);
+      document.getElementById('loading-state').classList.remove('active');
+      document.getElementById('analyze-btn').disabled = false;
+      return;
+    }
+
     if (result.not_a_food_label) {
       showResults(null, city, true);
     } else {
@@ -1418,7 +1385,7 @@ Be precise. Use actual numbers from the label. If a value is not visible, use a 
   } catch (err) {
     clearInterval(stepInterval);
     console.error(err);
-    showToast('⚠️ Could not read the label. Try a clearer photo.');
+    showToast('⚠️ Network error. Check your connection and try again.');
     document.getElementById('loading-state').classList.remove('active');
     document.getElementById('analyze-btn').disabled = false;
   }
