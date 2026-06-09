@@ -1067,7 +1067,7 @@
   <div class="nav-logo">phab <span>NutriIQ</span></div>
   <div class="nav-right">
     <button class="nav-tab active" onclick="showPage('scan')">📸 Scan</button>
-    <button class="nav-tab" onclick="showPage('feed')">📡 Live Feed</button>
+    <button class="nav-tab" onclick="requireFeedAuth()">📡 Live Feed</button>
     <button class="nav-tab" onclick="showPage('leaderboard')">🏆 Cities</button>
     <button class="nav-tab" onclick="showPage('about')">📐 Index</button>
   </div>
@@ -1330,11 +1330,42 @@ let lbMode = 'overall';
 
 
 // ===================== PAGE ROUTING =====================
+let _feedAuthed = false;
+
+function requireFeedAuth() {
+  if (_feedAuthed) { showPage('feed'); return; }
+  const secret = prompt('Live Feed is for admins only.\nEnter admin secret:');
+  if (!secret) return;
+  // Verify against admin-clear endpoint (reuses same secret)
+  fetch('/api/admin-clear', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ secret, _check_only: true })
+  }).then(r => {
+    // 401 = wrong secret, anything else (200 or 400 for check_only) = correct
+    if (r.status === 401) {
+      showToast('❌ Wrong secret.');
+    } else {
+      _feedAuthed = true;
+      showPage('feed');
+    }
+  }).catch(() => {
+    // Network error — still let through if secret looks non-empty
+    showToast('Could not verify — try again.');
+  });
+}
+
 function showPage(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
-  event.target.classList.add('active');
+  // Mark the correct nav tab active
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    if (t.textContent.includes('Feed') && page === 'feed') t.classList.add('active');
+    else if (t.textContent.includes('Cities') && page === 'leaderboard') t.classList.add('active');
+    else if (t.textContent.includes('Scan') && page === 'scan') t.classList.add('active');
+    else if (t.textContent.includes('Index') && page === 'about') t.classList.add('active');
+  });
   if (page === 'leaderboard') renderLeaderboard();
   if (page === 'feed') initFeed();
 }
@@ -2326,11 +2357,15 @@ async function fetchFeed() {
         <td style="font-size:12px; text-align:center;">${r.has_artificial_additives ? '⚠️' : '✅'}</td>
         <td style="text-align:center; min-width:60px;">
           ${r.image_url
-            ? `<img src="${r.image_url}" alt="label" onclick="openFeedCard(${idx})"
-                style="width:44px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer;display:block;margin:0 auto;border:1.5px solid var(--border);" title="View label photo">`
-            : `<canvas id="thumb-${idx}" width="54" height="96"
-                style="border-radius:6px; cursor:pointer; display:block; margin:0 auto;"
-                onclick="openFeedCard(${idx})" title="View report card"></canvas>`}
+            ? `<img src="${r.image_url}" alt="label photo"
+                onclick="window.open('${r.image_url}','_blank')"
+                style="width:44px;height:60px;object-fit:cover;border-radius:6px;cursor:zoom-in;display:block;margin:0 auto;border:1.5px solid var(--border);" title="View full photo">`
+            : `<span style="color:var(--muted);font-size:11px;">—</span>`}
+        </td>
+        <td style="text-align:center; min-width:60px;">
+          <canvas id="thumb-${idx}" width="54" height="96"
+            style="border-radius:6px; cursor:pointer; display:block; margin:0 auto;"
+            onclick="openFeedCard(${idx})" title="View report card"></canvas>
         </td>
       </tr>`;
     }).join('');
@@ -2350,6 +2385,7 @@ async function fetchFeed() {
             <th>Tier</th>
             <th>Protein Eff.</th>
             <th>Additives</th>
+            <th>Photo</th>
             <th>Card</th>
           </tr>
         </thead>
@@ -2428,8 +2464,20 @@ function openFeedCard(idx) {
     protein_per_100kcal: r.protein_per_100kcal ?? 0,
     per_100g: { sugar_g: r.sugar_per_100g ?? 0, calories: r.calories_per_100g ?? 0, protein_g: 0, carbs_g: 0, fat_g: 0, saturated_fat_g: 0, fibre_g: r.fibre_per_100g ?? 0, sodium_mg: 0 },
     has_artificial_additives: r.has_artificial_additives ?? false,
-    verdicts: { good: ['Live feed scan'], bad: [], neutral: [] },
-    body_impact: '',
+    verdicts: {
+      good: [
+        r.protein_per_100kcal != null ? `${r.protein_per_100kcal.toFixed(1)}g protein per 100 kcal` : null,
+        r.fibre_per_100g > 2 ? `${r.fibre_per_100g.toFixed(1)}g fibre per 100g` : null,
+        !r.has_artificial_additives ? 'No artificial additives detected' : null
+      ].filter(Boolean),
+      bad: [
+        r.sugar_per_100g > 10 ? `High sugar: ${r.sugar_per_100g.toFixed(1)}g per 100g` : null,
+        r.has_artificial_additives ? 'Contains artificial additives' : null,
+        r.protein_per_100kcal < 5 ? `Low protein efficiency: ${(r.protein_per_100kcal??0).toFixed(1)}g/100kcal` : null
+      ].filter(Boolean),
+      neutral: [`Scanned from ${r.city || 'unknown city'} · Tier: ${(r.tier_label||'').replace(/_/g,' ')}`]
+    },
+    body_impact: `This product scored ${r.nutri_iq_score}/100 on the NutriIQ scale. ${r.nutri_iq_score < 50 ? 'Expect a glycaemic spike and low satiety over the next 2 hours.' : r.nutri_iq_score < 70 ? 'Moderate impact — decent fuel but room for improvement.' : 'Good fuel choice — sustained energy likely.'}`,
     phab_comparison: { this_protein_per_100kcal: r.protein_per_100kcal ?? 0, phab_protein_per_100kcal: 17.5, this_sugar_per_100g: r.sugar_per_100g ?? 0, phab_sugar_per_100g: 0, nutri_iq_gap: 82 - (r.nutri_iq_score ?? 0) }
   };
   const overlay = document.getElementById('share-modal-overlay');
