@@ -976,6 +976,71 @@
   .score-great { color: var(--score-great); }
   .score-ok { color: var(--score-ok); }
   .score-bad { color: var(--score-bad); }
+
+  /* SHARE CARD MODAL */
+  .share-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.78);
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    backdrop-filter: blur(4px);
+  }
+  .share-modal-overlay.hidden { display: none; }
+  .share-modal-box {
+    background: #181f27;
+    border-radius: 20px;
+    padding: 1.5rem;
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+  .share-modal-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    align-self: flex-start;
+  }
+  #share-canvas {
+    border-radius: 14px;
+    max-width: 100%;
+    height: auto;
+    display: block;
+    box-shadow: 0 8px 32px rgba(0,180,200,0.18);
+  }
+  .share-modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    width: 100%;
+  }
+  .share-modal-actions button {
+    flex: 1;
+    padding: 0.75rem;
+    border-radius: 10px;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .share-modal-actions button:hover { opacity: 0.85; }
+  .share-dl-btn {
+    background: #00B4C8;
+    color: #fff;
+  }
+  .share-close-btn {
+    background: #2a3240;
+    color: rgba(255,255,255,0.8);
+  }
 </style>
 </head>
 <body>
@@ -1200,6 +1265,18 @@
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+
+<!-- SHARE CARD MODAL -->
+<div class="share-modal-overlay hidden" id="share-modal-overlay" onclick="closeShareModal(event)">
+  <div class="share-modal-box" id="share-modal-box">
+    <div class="share-modal-title">Your NutriIQ Card</div>
+    <canvas id="share-canvas" width="540" height="960"></canvas>
+    <div class="share-modal-actions">
+      <button class="share-dl-btn" id="share-dl-btn" onclick="downloadShareCard()">⬇ Download PNG</button>
+      <button class="share-close-btn" onclick="closeShareModal()">✕ Close</button>
+    </div>
+  </div>
+</div>
 
 <div class="footer">
   Built by <a href="#">Phab</a> · nutritionist-grade food intelligence · <a href="#">phab.in</a>
@@ -1635,14 +1712,309 @@ function resetScan() {
 
 function shareResult() {
   if (!currentResults) return;
-  const score = Math.round(currentResults.nutri_iq_score);
-  const text = `My ${currentResults.product_name} scored ${score}/100 on the NutriIQ scale 🔬\n\nHow does your snack compare? scan.phab.in\n\n#NutriIQ #Phab #WhatReallyIsInYourFood`;
-  if (navigator.share) {
-    navigator.share({ title: 'My NutriIQ Score', text });
-  } else {
-    navigator.clipboard.writeText(text);
-    showToast('✓ Copied to clipboard!');
+  openShareCard(currentResults);
+}
+
+// ===================== AUTO-DETECT CITY =====================
+async function autoDetectCity() {
+  if (!navigator.geolocation) return;
+  const select = document.getElementById('city-select');
+  if (!select) return;
+
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      try {
+        const { latitude, longitude } = pos.coords;
+        const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`;
+        const res = await fetch(url, {
+          headers: { 'Accept-Language': 'en', 'User-Agent': 'NutriIQ/1.0 (scan.phab.in)' }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const addr = data.address || {};
+        // Nominatim returns city/town/village/county in priority order
+        const detected = addr.city || addr.town || addr.village || addr.county || addr.state_district || '';
+        if (!detected) return;
+
+        // Try to match against existing <option> values (case-insensitive prefix match)
+        const options = Array.from(select.options);
+        const matched = options.find(o =>
+          o.value && detected.toLowerCase().includes(o.value.toLowerCase())
+        );
+        if (matched) {
+          select.value = matched.value;
+        } else {
+          // Insert a detected option if not in list
+          const opt = document.createElement('option');
+          opt.value = detected;
+          opt.textContent = `📍 ${detected} (detected)`;
+          opt.selected = true;
+          // Insert after the placeholder option
+          select.insertBefore(opt, select.options[1]);
+        }
+        showToast(`📍 City auto-detected: ${matched ? matched.value : detected}`);
+      } catch (_) {
+        // Silently fail — geolocation worked but reverse geocoding failed
+      }
+    },
+    () => {
+      // Permission denied or unavailable — do nothing, user can pick manually
+    },
+    { timeout: 8000, maximumAge: 300000 }
+  );
+}
+
+// ===================== SHARE CARD =====================
+function openShareCard(data) {
+  const overlay = document.getElementById('share-modal-overlay');
+  overlay.classList.remove('hidden');
+  const canvas = document.getElementById('share-canvas');
+  drawShareCard(canvas, data);
+}
+
+function closeShareModal(e) {
+  if (e && e.target !== document.getElementById('share-modal-overlay')) return;
+  document.getElementById('share-modal-overlay').classList.add('hidden');
+}
+
+function downloadShareCard() {
+  const canvas = document.getElementById('share-canvas');
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  const name = (currentResults && currentResults.product_name)
+    ? currentResults.product_name.replace(/[^a-z0-9]/gi, '_').slice(0, 30)
+    : 'nutriiq';
+  a.download = `${name}_nutriiq.png`;
+  a.click();
+}
+
+function drawShareCard(canvas, data) {
+  // Card is 540×960 (9:16 ratio, renders crisply on mobile)
+  const W = 540, H = 960;
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // ---- Helpers ----
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
   }
+
+  function wrapText(text, x, y, maxWidth, lineHeight) {
+    const words = String(text).split(' ');
+    let line = '';
+    for (let i = 0; i < words.length; i++) {
+      const test = line + (line ? ' ' : '') + words[i];
+      if (ctx.measureText(test).width > maxWidth && line) {
+        ctx.fillText(line, x, y);
+        line = words[i];
+        y += lineHeight;
+      } else { line = test; }
+    }
+    if (line) ctx.fillText(line, x, y);
+    return y;
+  }
+
+  // ---- Score color ----
+  const score = Math.round(data.nutri_iq_score || 0);
+  const scoreColor = score >= 75 ? '#1db96a' : score >= 50 ? '#e8a030' : '#e84040';
+
+  // ---- Dark background ----
+  ctx.fillStyle = '#0D1117';
+  ctx.fillRect(0, 0, W, H);
+
+  // ---- Subtle radial glow behind score circle ----
+  const glow = ctx.createRadialGradient(W / 2, 240, 0, W / 2, 240, 260);
+  glow.addColorStop(0, scoreColor + '22');
+  glow.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, 500);
+
+  // ---- Top teal accent bar ----
+  ctx.fillStyle = '#00B4C8';
+  roundRect(0, 0, W, 6, 0);
+  ctx.fill();
+
+  // ---- Brand header ----
+  ctx.font = 'bold 18px "Arial", sans-serif';
+  ctx.fillStyle = '#00B4C8';
+  ctx.textAlign = 'left';
+  ctx.fillText('phab', 36, 52);
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = '14px "Arial", sans-serif';
+  ctx.fillText('NutriIQ', 82, 52);
+
+  // ---- Tier pill ----
+  const tier = (data.tier_label || '').replace(/_/g, ' ').toUpperCase();
+  ctx.font = 'bold 11px "Arial", sans-serif';
+  const pillW = ctx.measureText(tier).width + 24;
+  roundRect(W - 36 - pillW, 36, pillW, 24, 12);
+  ctx.fillStyle = scoreColor + '33';
+  ctx.fill();
+  ctx.strokeStyle = scoreColor;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = scoreColor;
+  ctx.textAlign = 'right';
+  ctx.fillText(tier, W - 36, 52);
+
+  // ---- Score ring ----
+  const cx = W / 2, cy = 230, radius = 110, lineW = 14;
+  // Track
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = lineW;
+  ctx.stroke();
+  // Fill arc (score out of 100)
+  const startAngle = -Math.PI / 2;
+  const endAngle = startAngle + (score / 100) * Math.PI * 2;
+  const grad = ctx.createLinearGradient(cx - radius, cy, cx + radius, cy);
+  grad.addColorStop(0, '#00B4C8');
+  grad.addColorStop(1, scoreColor);
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, startAngle, endAngle);
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = lineW;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  // Score number
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 72px "Arial", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(score, cx, cy + 24);
+  // "/100" label
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = '16px "Arial", sans-serif';
+  ctx.fillText('/ 100', cx, cy + 50);
+  // "NutriIQ" inside ring
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = '13px "Arial", sans-serif';
+  ctx.fillText('NutriIQ Score', cx, cy - 78);
+
+  // ---- Product name ----
+  const productName = data.product_name || 'Unknown Product';
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 26px "Arial", sans-serif';
+  ctx.textAlign = 'center';
+  const maxNameWidth = W - 80;
+  if (ctx.measureText(productName).width > maxNameWidth) {
+    ctx.font = 'bold 20px "Arial", sans-serif';
+  }
+  wrapText(productName, cx, 386, maxNameWidth, 30);
+
+  // ---- Divider ----
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(36, 430); ctx.lineTo(W - 36, 430);
+  ctx.stroke();
+
+  // ---- Key stats (3 cards in a row) ----
+  const stats = [
+    {
+      label: 'Protein Eff.',
+      value: data.protein_per_100kcal != null ? `${Number(data.protein_per_100kcal).toFixed(1)}g` : '—',
+      sub: 'per 100 kcal',
+      color: '#00B4C8'
+    },
+    {
+      label: 'Sugar',
+      value: data.per_100g && data.per_100g.sugar_g != null ? `${Number(data.per_100g.sugar_g).toFixed(1)}g` : '—',
+      sub: 'per 100g',
+      color: score >= 75 ? '#1db96a' : '#e8a030'
+    },
+    {
+      label: 'Additives',
+      value: data.has_artificial_additives ? 'YES' : 'NONE',
+      sub: 'artificial',
+      color: data.has_artificial_additives ? '#e84040' : '#1db96a'
+    }
+  ];
+
+  const cardW = (W - 36 * 2 - 12 * 2) / 3;
+  const cardH = 100;
+  const cardY = 450;
+  stats.forEach((s, i) => {
+    const cardX = 36 + i * (cardW + 12);
+    roundRect(cardX, cardY, cardW, cardH, 12);
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Value
+    ctx.fillStyle = s.color;
+    ctx.font = 'bold 22px "Arial", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(s.value, cardX + cardW / 2, cardY + 38);
+    // Label
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 11px "Arial", sans-serif';
+    ctx.fillText(s.label, cardX + cardW / 2, cardY + 58);
+    // Sub
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '10px "Arial", sans-serif';
+    ctx.fillText(s.sub, cardX + cardW / 2, cardY + 74);
+  });
+
+  // ---- Score grade badge ----
+  if (data.score_grade) {
+    ctx.font = 'bold 13px "Arial", sans-serif';
+    ctx.textAlign = 'center';
+    const gradeText = `Grade: ${data.score_grade}`;
+    const gW = ctx.measureText(gradeText).width + 28;
+    roundRect(cx - gW / 2, 570, gW, 28, 14);
+    ctx.fillStyle = scoreColor + '22';
+    ctx.fill();
+    ctx.strokeStyle = scoreColor + '88';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = scoreColor;
+    ctx.fillText(gradeText, cx, 589);
+  }
+
+  // ---- Body impact text ----
+  if (data.body_impact) {
+    const impactY = data.score_grade ? 630 : 600;
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.font = '14px "Arial", sans-serif';
+    ctx.textAlign = 'center';
+    wrapText(data.body_impact, cx, impactY, W - 72, 22);
+  }
+
+  // ---- Bottom branding ----
+  // Teal bottom bar
+  ctx.fillStyle = '#00B4C8';
+  roundRect(0, H - 6, W, 6, 0);
+  ctx.fill();
+
+  // Phab logo area
+  roundRect(36, H - 90, W - 72, 60, 12);
+  ctx.fillStyle = 'rgba(0,180,200,0.08)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,180,200,0.25)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.fillStyle = '#00B4C8';
+  ctx.font = 'bold 18px "Arial", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('phab NutriIQ', cx, H - 60);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = '12px "Arial", sans-serif';
+  ctx.fillText('scan.phab.in · science-backed food intelligence', cx, H - 42);
 }
 
 function shareCity(city, score) {
@@ -1677,6 +2049,8 @@ function showToast(msg) {
 // Init leaderboard and live stats
 renderLeaderboard();
 updateScanCount();
+// Auto-detect city from browser geolocation on page load
+autoDetectCity();
 
 // ===================== LIVE FEED =====================
 let feedInterval = null;
