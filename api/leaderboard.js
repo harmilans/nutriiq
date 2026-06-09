@@ -1,7 +1,10 @@
-const CACHE_SECONDS = 900;
+// api/leaderboard.js
+// Returns rolling 7-day city leaderboard from Supabase
+
+const CACHE_SECONDS = 900; // 15 minutes
 
 export default async function handler(req, res) {
-  const mode = req.query?.mode || 'overall';
+  const mode = req.query?.mode || 'overall'; // overall | protein | sugar
 
   res.setHeader('Cache-Control', `public, s-maxage=${CACHE_SECONDS}, stale-while-revalidate=60`);
 
