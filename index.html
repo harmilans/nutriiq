@@ -1059,6 +1059,15 @@
     <img id="preview-img" src="" alt="Uploaded label">
   </div>
 
+  <div id="product-name-wrap" style="display:none; max-width:520px; margin:0 auto 1rem; padding:0 1rem;">
+    <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--text);">
+      Product name <span style="font-weight:400; color:var(--muted);">(optional — helps if label is hard to read)</span>
+    </label>
+    <input type="text" id="product-name-input"
+      placeholder="e.g. Lay's Classic Salted, Britannia NutriChoice..."
+      style="width:100%; box-sizing:border-box; padding:12px 14px; border:1.5px solid var(--phab); border-radius:10px; font-size:14px; font-family:inherit; background:var(--surface); color:var(--text); outline:none;">
+  </div>
+
   <div style="text-align:center; padding:0 1rem 1rem;">
     <button class="btn-analyze" id="analyze-btn" onclick="analyzeImage()" disabled>
       Analyse this food →
@@ -1290,13 +1299,18 @@ function startReadabilityLoop() {
 function capturePhoto() {
   const video = document.getElementById('camera-video');
   const canvas = document.getElementById('camera-canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video, 0, 0);
+  const MAX = 1200;
+  let w = video.videoWidth, h = video.videoHeight;
+  if (w > MAX || h > MAX) {
+    if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+    else       { w = Math.round(w * MAX / h); h = MAX; }
+  }
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').drawImage(video, 0, 0, w, h);
   canvas.toBlob(blob => {
     closeCamera();
     handleFile(new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' }));
-  }, 'image/jpeg', 0.92);
+  }, 'image/jpeg', 0.80);
 }
 
 // ===================== FILE UPLOAD =====================
@@ -1321,18 +1335,35 @@ uploadZone.addEventListener('drop', e => {
 function handleFile(file) {
   const reader = new FileReader();
   reader.onload = function(ev) {
-    const dataUrl = ev.target.result;
-    uploadedImageBase64 = dataUrl.split(',')[1];
-    uploadedImageType = file.type;
+    const originalDataUrl = ev.target.result;
 
-    const preview = document.getElementById('img-preview');
-    const img = document.getElementById('preview-img');
-    img.src = dataUrl;
-    preview.classList.add('active');
+    // Resize + compress before storing — keep max 1200px, JPEG 80%
+    const imgEl = new Image();
+    imgEl.onload = function() {
+      const MAX = 1200;
+      let w = imgEl.width, h = imgEl.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else       { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(imgEl, 0, 0, w, h);
+      const compressed = c.toDataURL('image/jpeg', 0.80);
+      uploadedImageBase64 = compressed.split(',')[1];
+      uploadedImageType = 'image/jpeg';
 
-    document.getElementById('analyze-btn').disabled = false;
-    document.getElementById('results-wrap').classList.remove('active');
-    document.getElementById('loading-state').classList.remove('active');
+      const preview = document.getElementById('img-preview');
+      const previewImg = document.getElementById('preview-img');
+      previewImg.src = compressed;
+      preview.classList.add('active');
+
+      document.getElementById('analyze-btn').disabled = false;
+      document.getElementById('results-wrap').classList.remove('active');
+      document.getElementById('loading-state').classList.remove('active');
+      document.getElementById('product-name-wrap').style.display = 'block';
+    };
+    imgEl.src = originalDataUrl;
   };
   reader.readAsDataURL(file);
 }
@@ -1369,7 +1400,8 @@ async function analyzeImage() {
       body: JSON.stringify({
         imageBase64: uploadedImageBase64,
         imageType: uploadedImageType,
-        city: city
+        city: city,
+        productName: document.getElementById('product-name-input').value.trim() || null
       })
     });
 
@@ -1599,6 +1631,8 @@ function resetScan() {
   document.getElementById('analyze-btn').disabled = true;
   document.getElementById('file-input').value = '';
   document.querySelectorAll('.loading-step').forEach(s => { s.classList.remove('active', 'done'); });
+  document.getElementById('product-name-input').value = '';
+  document.getElementById('product-name-wrap').style.display = 'none';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
