@@ -1209,7 +1209,7 @@
     </div>
 
     <div style="margin-top:1.5rem; padding:1rem 1.25rem; background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); font-size:13px; color:var(--muted);">
-      <strong style="color:var(--text);">How scoring works:</strong> Each city's score is the rolling 7-day average of all NutriIQ scans by users who selected that city. Min 10 scans to appear. Scores update every 15 minutes.
+      <strong style="color:var(--text);">How scoring works:</strong> Each city's score is the rolling 7-day average of all NutriIQ scans by users who selected that city. Cities appear from 1 scan. Scores update every minute.
     </div>
   </div>
 </div>
@@ -1708,7 +1708,7 @@ async function renderLeaderboard() {
       lb.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--muted);font-size:14px;">
         <div style="font-size:2rem;margin-bottom:1rem;">📡</div>
         <strong>No city data yet</strong><br>
-        Cities appear once they have 10+ scans in the last 7 days.
+        Cities appear once they have at least 1 scan in the last 7 days.
       </div>`;
       return;
     }
@@ -2130,10 +2130,36 @@ function shareX(product, score, grade) {
   window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
 }
 
-function shareInstagram(product, score, grade) {
-  // Instagram doesn't support deep-link sharing from web — download card instead, prompt user to post
-  shareResult();
-  setTimeout(() => showToast('📸 Card downloaded! Open Instagram and share to Stories or Feed.'), 400);
+async function shareInstagram(product, score, grade) {
+  const canvas = document.getElementById('share-canvas');
+  if (!canvas) { shareResult(); return; }
+  // Ensure card is drawn
+  if (currentResults) drawShareCard(canvas, currentResults);
+
+  // On mobile, use native share sheet (shows Instagram, WhatsApp, etc.)
+  if (navigator.canShare) {
+    try {
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+      const name = (currentResults && currentResults.product_name)
+        ? currentResults.product_name.replace(/[^a-z0-9]/gi, '_').slice(0, 30) + '_nutriiq.png'
+        : 'nutriiq_card.png';
+      const file = new File([blob], name, { type: 'image/png' });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'NutriIQ Score',
+          text: _buildShareText(product, score, grade)
+        });
+        return;
+      }
+    } catch (e) {
+      if (e.name !== 'AbortError') console.warn('Share failed', e);
+      return;
+    }
+  }
+  // Desktop fallback: download + instruct
+  downloadShareCard();
+  setTimeout(() => showToast('📸 Card saved! Upload it to Instagram Stories or Feed.'), 400);
 }
 
 async function updateScanCount() {
@@ -2232,7 +2258,8 @@ async function fetchFeed() {
     }).join('');
 
     document.getElementById('feed-content').innerHTML = `
-      <div style="text-align:right; margin-bottom:0.75rem;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+        <button onclick="adminClearFeed()" style="background:transparent; border:1.5px solid #e74c3c; border-radius:8px; padding:6px 16px; font-size:13px; cursor:pointer; font-family:inherit; color:#e74c3c;">🗑 Clear Feed</button>
         <button onclick="exportFeedCSV()" style="background:var(--surface); border:1.5px solid var(--border); border-radius:8px; padding:6px 16px; font-size:13px; cursor:pointer; font-family:inherit;">⬇ Export CSV</button>
       </div>
       <table class="feed-table">
@@ -2260,6 +2287,25 @@ async function fetchFeed() {
   } catch (err) {
     console.error('Feed error:', err);
     document.getElementById('feed-content').innerHTML = `<div class="feed-loading">Could not load feed. ${err.message}</div>`;
+  }
+}
+
+async function adminClearFeed() {
+  const secret = prompt('Enter admin secret to clear all feed data:');
+  if (!secret) return;
+  if (!confirm('This will permanently delete ALL scan records. Are you sure?')) return;
+  try {
+    const res = await fetch('/api/admin-clear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret })
+    });
+    const json = await res.json();
+    if (!res.ok) { showToast('Error: ' + (json.error || res.status)); return; }
+    showToast(`✅ Cleared ${json.deleted ?? 0} scan${json.deleted !== 1 ? 's' : ''} from feed.`);
+    fetchFeed();
+  } catch (e) {
+    showToast('Request failed: ' + e.message);
   }
 }
 
