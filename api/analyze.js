@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   const safeProductName = sanitizeText(productName, 120);
 
   const SYSTEM_PROMPT = `You are NutriIQ, a nutritional intelligence engine built by Phab (an Indian protein bar brand).
-Analyse nutrition labels with scientific rigour and a dry, slightly dark sense of humour in your descriptions.
+Analyse nutrition labels with scientific rigour. Tone in body_impact must match the score: celebrate good products, warn about bad ones.
 Always return valid JSON only — no markdown, no backticks, no preamble.`;
 
   const USER_PROMPT = `Analyse this nutrition label image and return ONLY a valid JSON object.
@@ -35,9 +35,18 @@ ${safeProductName ? `The user has identified this product as: "${safeProductName
 If the label is partially visible, estimate missing values from what is visible.
 Only set "not_a_food_label": true if the image contains NO food packaging whatsoever.
 
+NOTE on per_100g: ALL numeric values must be normalised to per-100g basis regardless of serving size printed on label.
+Also extract the actual serving size (e.g. 40g) and per-serving protein so the UI can show both.
+
+body_impact tone rules:
+- nutri_iq_score >= 75: positive, energising — "clean fuel", "muscles will thank you", sustained energy
+- nutri_iq_score 50–74: balanced — note what's good and what to watch
+- nutri_iq_score < 50: cautionary — spike, crash, additive load etc.
+
 Required shape:
 {
   "product_name": "string (product name if visible, else 'Unknown product')",
+  "serving_size_g": number (serving size in grams from label, or null if not shown),
   "per_100g": {
     "calories": number,
     "protein_g": number,
@@ -61,12 +70,12 @@ Required shape:
     "bad": ["2-3 specific negative findings with numbers"],
     "neutral": ["1-2 neutral observations"]
   },
-  "body_impact": "2-3 sentences: what this food does to the body in the 2 hours after eating. Be specific and slightly dramatic but accurate.",
+  "body_impact": "2-3 sentences matching tone to score (see rules above). Be specific and accurate.",
   "phab_comparison": {
     "this_protein_per_100kcal": number,
-    "phab_protein_per_100kcal": 17.5,
+    "phab_protein_per_100kcal": 5.9,
     "this_sugar_per_100g": number,
-    "phab_sugar_per_100g": 0,
+    "phab_sugar_per_100g": 8.48,
     "nutri_iq_gap": number
   },
   "not_a_food_label": boolean
