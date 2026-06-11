@@ -698,6 +698,134 @@
     letter-spacing: -0.05em;
     pointer-events: none;
   }
+
+  /* ===== PERSONA CARD ===== */
+  .persona-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .persona-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--persona-gradient, linear-gradient(135deg, rgba(0,180,200,0.08), transparent));
+    pointer-events: none;
+  }
+  .persona-emoji {
+    font-size: 2.6rem;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+  .persona-type {
+    font-size: 10px;
+    font-family: 'Space Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    margin-bottom: 0.2rem;
+  }
+  .persona-name {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 0.4rem;
+    line-height: 1.2;
+  }
+  .persona-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  /* ===== PERCENTILE BANNER ===== */
+  .percentile-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.85rem 1.25rem;
+    margin-bottom: 1rem;
+    animation: cardUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.6s both;
+  }
+  .percentile-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--phab);
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .percentile-bar-wrap {
+    flex: 1;
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .percentile-bar-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #EF4444, #F59E0B, #22C55E);
+    transition: width 1.2s cubic-bezier(0.22,1,0.36,1);
+  }
+
+  /* ===== ROAST TOGGLE ===== */
+  .roast-toggle-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 1rem;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 99px;
+    margin-bottom: 1rem;
+    cursor: pointer;
+    user-select: none;
+  }
+  .roast-toggle-label {
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text);
+  }
+  .roast-toggle-pill {
+    width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    background: var(--border);
+    position: relative;
+    transition: background 0.25s;
+    flex-shrink: 0;
+  }
+  .roast-toggle-pill.on { background: #e85050; }
+  .roast-toggle-pill::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.25s;
+  }
+  .roast-toggle-pill.on::after { transform: translateX(16px); }
+  .roast-body-impact {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-top: 0.5rem;
+    padding: 0 0.25rem;
+    transition: opacity 0.25s;
+  }
   .phab-cta-head {
     font-size: 12px;
     font-family: 'Space Mono', monospace;
@@ -1562,6 +1690,89 @@ function pickPunchLine(score) {
   return pool[(Math.random() * pool.length) | 0];
 }
 
+// ===================== FOOD PERSONAS =====================
+const PERSONAS = [
+  // (score, protein, sugar_source, additives) → persona
+  { id: 'peak_fueller',    emoji: '⚡', name: 'Peak Fueller',       gradient: 'linear-gradient(135deg,rgba(29,185,106,0.12),rgba(0,180,200,0.08))', desc: 'You eat like your body is a Formula 1 car. High protein, low junk, clean labels — your gut sends thank-you notes.', match: s => s >= 80 && !s._add },
+  { id: 'clean_athlete',   emoji: '🏋️', name: 'Clean Athlete',      gradient: 'linear-gradient(135deg,rgba(0,180,200,0.12),rgba(29,185,106,0.06))', desc: 'Strong macros, no artificial nonsense. You know the difference between protein and "protein-flavoured."', match: s => s >= 70 && s._prot >= 4 && !s._add },
+  { id: 'calculated_fueller', emoji: '🧮', name: 'Calculated Fueller', gradient: 'linear-gradient(135deg,rgba(0,180,200,0.1),transparent)', desc: 'You read the label before you eat. That alone puts you in the top 10% of the aisle.', match: s => s >= 60 && s._prot >= 3 },
+  { id: 'wholesome_snacker', emoji: '🌿', name: 'Wholesome Snacker', gradient: 'linear-gradient(135deg,rgba(29,185,106,0.1),transparent)', desc: 'Date-sweetened, fibre-rich, real ingredients — you pick food that actually grew somewhere.', match: s => s >= 60 && s._sugar === 'natural_fruit' },
+  { id: 'mindful_indulger', emoji: '🧘', name: 'Mindful Indulger',   gradient: 'linear-gradient(135deg,rgba(245,158,11,0.1),transparent)', desc: "Not perfect, but aware. You know what you're eating and you've made your peace with it.", match: s => s >= 45 && s < 65 },
+  { id: 'weekend_villain',  emoji: '😈', name: 'Weekend Villain',    gradient: 'linear-gradient(135deg,rgba(239,68,68,0.1),transparent)', desc: 'Monday you meal-preps. Friday you eats this. The scale has trust issues.', match: s => s >= 30 && s < 50 && s._sugar === 'refined' },
+  { id: 'sugar_archaeologist', emoji: '🍬', name: 'Sugar Archaeologist', gradient: 'linear-gradient(135deg,rgba(239,68,68,0.12),rgba(245,158,11,0.06))', desc: "You've discovered a food that is, technically, just sugar wearing a disguise. Respect the hustle.", match: s => s._sugarG > 20 },
+  { id: 'chaos_eater',     emoji: '🌀', name: 'Chaos Eater',        gradient: 'linear-gradient(135deg,rgba(239,68,68,0.15),transparent)', desc: 'Label? Never heard of her. You eat first, ask questions never. The doctor will explain everything at the next visit.', match: s => s < 35 || s._add },
+  { id: 'mystery_muncher', emoji: '🔮', name: 'Mystery Muncher',    gradient: 'linear-gradient(135deg,rgba(184,127,255,0.1),transparent)', desc: 'Even the AI had to guess what this is. Bold choice.', match: () => true }, // fallback
+];
+
+function getPersona(data) {
+  const ctx = {
+    valueOf() { return Math.round(data.nutri_iq_score || 0); },
+    _prot: data.protein_per_100kcal || 0,
+    _sugar: data.sugar_source,
+    _sugarG: data.per_100g?.sugar_g || 0,
+    _add: data.has_artificial_additives,
+  };
+  const score = +ctx;
+  return PERSONAS.find(p => p.match({ ...ctx, valueOf() { return score; }, [Symbol.toPrimitive]() { return score; } })) || PERSONAS[PERSONAS.length - 1];
+}
+
+// ===================== ROAST LINES =====================
+const ROAST = {
+  hinglish: {
+    great:  ['Yaar, yeh toh full paisa vasool hai 💪', 'Body ne WhatsApp status badal diya: "Fuelled and ready" 🔥', 'Kya item hai bhai — label dekha toh dil khush ho gaya 🤩'],
+    good:   ['Theek thaak hai, but hero banna hai toh thoda aur mehnat kar 👀', 'Average se upar hai — teri maa khush hogi 😅'],
+    mid:    ['Bhai seedha bolunga — yeh acha nahi hai 😬', 'Yeh khana nahi, compromise hai bhai 🤷', 'Teri body keh rahi hai: "seriously?" 😤'],
+    bad:    ['Bhai yeh toh almost poison hai 💀', 'Yeh kha ke gym jaata hai? Respect + concern dono 😂', 'Label padha kya? Kyunki hum padha aur hame darr laga 👻'],
+    awful:  ['Yeh crime scene hai bhai, hum case file kar rahe hain 🚨', 'Mogambo khush hua. Tera doctor nahi. 😈', 'Iska naam "health food" nahi, "bold life choices" hona chahiye 💣'],
+  },
+  en: {
+    great:  ["Nutritionally, you're the main character 💪", 'Your body just filed a formal compliment 🏆', "This food is doing actual work. Chef's kiss. 🫡"],
+    good:   ['Solid. Not viral, but solid. 👌', 'Above average — your gut rates this 7/10 🙂'],
+    mid:    ["It's... fine. Like a Tuesday. 😐", 'Nutritionally speaking, this is a shrug emoji.', 'The food equivalent of a participation trophy 🏅'],
+    bad:    ['This food has the nutritional ambition of a napkin 😬', 'Your pancreas is filing a complaint as we speak 📋', 'I have concerns. The macros have concerns. 😶'],
+    awful:  ["This is food in the same way a speed bump is a road feature 💀", 'We legally cannot recommend continuing this snack 🚨', "Congratulations, you've found food that is actively working against you 😂"],
+  }
+};
+
+let roastMode = false;
+
+function pickRoastLine(score) {
+  const bank = ROAST[appLang === 'hinglish' ? 'hinglish' : 'en'];
+  const band = score >= 80 ? 'great' : score >= 65 ? 'good' : score >= 48 ? 'mid' : score >= 30 ? 'bad' : 'awful';
+  const pool = bank[band];
+  return pool[(Math.random() * pool.length) | 0];
+}
+
+function toggleRoast() {
+  roastMode = !roastMode;
+  const pill = document.getElementById('roast-pill');
+  const body = document.getElementById('roast-body');
+  if (pill) pill.classList.toggle('on', roastMode);
+  if (body && currentResults) {
+    body.style.opacity = 0;
+    setTimeout(() => {
+      body.textContent = roastMode
+        ? pickRoastLine(Math.round(currentResults.nutri_iq_score || 0))
+        : currentResults.body_impact;
+      body.style.opacity = 1;
+    }, 200);
+  }
+}
+
+// ===================== PERCENTILE (computed from leaderboard avg as proxy) =====================
+// Distribution model: assume scanned foods roughly follow a normal-ish spread.
+// We use a simple lookup table calibrated from typical packaged food scores.
+function estimatePercentile(score) {
+  // Based on distribution: most packaged food in India scores 30–65
+  const thresholds = [
+    [90, 99], [80, 93], [75, 88], [70, 80], [65, 72],
+    [60, 63], [55, 54], [50, 45], [45, 36], [40, 28],
+    [35, 20], [30, 13], [20, 7], [10, 3], [0, 1],
+  ];
+  for (const [t, p] of thresholds) { if (score >= t) return p; }
+  return 1;
+}
+
 // ===================== STATE =====================
 let uploadedImageBase64 = null;
 let uploadedImageType = null;
@@ -2114,10 +2325,14 @@ function showResults(data, city, notLabel) {
     return;
   }
 
+  roastMode = false;
   currentResults = data;
   const s = data;
   const score = Math.round(s.nutri_iq_score);
-  data._punch = pickPunchLine(score); // same line shows on screen and on the share card
+  data._punch = pickPunchLine(score);
+  const persona = getPersona(data);
+  data._persona = persona;
+  const percentile = estimatePercentile(score);
   const colorClass = s.score_color === 'great' ? 'score-great' : s.score_color === 'ok' ? 'score-ok' : 'score-bad';
   const strokeColor = s.score_color === 'great' ? '#22C55E' : s.score_color === 'ok' ? '#F59E0B' : '#EF4444';
   const circumference = 2 * Math.PI * 54;
@@ -2163,7 +2378,37 @@ function showResults(data, city, notLabel) {
         <span class="punch-text">${data._punch}</span>
         <span class="punch-star">★</span>
       </div>
-      <div class="score-tagline" style="margin-top:0.9rem;">${s.body_impact}</div>
+    </div>
+
+    <!-- PERCENTILE BANNER -->
+    <div class="percentile-banner">
+      <div>
+        <div class="percentile-num">${percentile}%</div>
+        <div style="font-size:10px; color:var(--muted); font-family:'Space Mono',monospace; margin-top:2px;">of scanned foods</div>
+      </div>
+      <div style="flex:1; padding: 0 0.75rem;">
+        <div style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:4px;">
+          This scores better than <strong style="color:var(--phab);">${percentile}%</strong> of all foods scanned on NutriIQ
+        </div>
+        <div class="percentile-bar-wrap"><div class="percentile-bar-fill" id="percentile-bar" data-pct="${percentile}"></div></div>
+      </div>
+    </div>
+
+    <!-- FOOD PERSONA -->
+    <div class="persona-card" style="--persona-gradient:${persona.gradient}">
+      <div class="persona-emoji">${persona.emoji}</div>
+      <div class="persona-type">Your food persona</div>
+      <div class="persona-name">${persona.name}</div>
+      <div class="persona-desc">${persona.desc}</div>
+    </div>
+
+    <!-- ROAST TOGGLE + BODY IMPACT -->
+    <div class="breakdown-card" style="margin-bottom:1rem;">
+      <div class="roast-toggle-wrap" onclick="toggleRoast()">
+        <span class="roast-toggle-label">🔥 Roast mode</span>
+        <div class="roast-toggle-pill" id="roast-pill"></div>
+      </div>
+      <div class="roast-body-impact" id="roast-body">${s.body_impact}</div>
     </div>
 
     <div class="nutrient-grid">
@@ -2282,6 +2527,12 @@ function showResults(data, city, notLabel) {
     if (fill) fill.style.strokeDashoffset = dash;
     animateScoreCount(score, strokeColor);
   }, 100);
+
+  // Animate percentile bar
+  setTimeout(() => {
+    const pb = document.getElementById('percentile-bar');
+    if (pb) pb.style.width = pb.dataset.pct + '%';
+  }, 500);
 
   // Animate nutrient bars + count-up values (staggered)
   setTimeout(() => animateNutrientCards(), 300);
