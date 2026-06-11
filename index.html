@@ -1925,13 +1925,13 @@ function renderCompareResults(results) {
 
     ${isProteinComparison ? `
     <div class="phab-cta" style="margin-top:1rem;">
-      <div class="phab-cta-head">Phab NutriIQ — ${PHAB_SCORE}/100</div>
+      <div class="phab-cta-head">built by phab · NutriIQ index</div>
       <div style="font-size:14px; color:rgba(255,255,255,0.85); line-height:1.55; margin:0.5rem 0 1rem;">You're comparing protein products — so we invited ourselves to the table. ${winner.nutri_iq_score >= PHAB_SCORE ? 'And honestly, Product ' + winner._slot + ' holds its own. Respect.' : 'Phab outscores both. Just the data talking.'}</div>
       <a href="https://www.getphab.com/collections/protein-bar" target="_blank" rel="noopener" style="display:block; background:#fff; color:#00B4C8; font-weight:700; font-size:14px; text-align:center; padding:0.75rem 1rem; border-radius:8px; text-decoration:none;">Care to grab a Phab? →</a>
     </div>` : `
     <div class="phab-cta" style="margin-top:1rem;">
-      <div class="phab-cta-head">built by phab · ${PHAB_SCORE}/100 on its own index</div>
-      <div style="font-size:14px; color:rgba(255,255,255,0.85); line-height:1.55; margin:0.5rem 0 1rem;">Go with Product ${winner._slot} — solid call. (Phab clocks ${PHAB_SCORE} on this same index, just saying 👀)</div>
+      <div class="phab-cta-head">built by phab · NutriIQ index</div>
+      <div style="font-size:14px; color:rgba(255,255,255,0.85); line-height:1.55; margin:0.5rem 0 1rem;">Go with Product ${winner._slot} — solid call. (Phab scores above industry benchmark on this same index, just saying 👀)</div>
       <a href="https://www.getphab.com/collections/protein-bar" target="_blank" rel="noopener" style="display:block; background:#fff; color:#00B4C8; font-weight:700; font-size:14px; text-align:center; padding:0.75rem 1rem; border-radius:8px; text-decoration:none;">Care to grab a Phab? →</a>
     </div>`}
   `;
@@ -2135,7 +2135,7 @@ function showResults(data, city, notLabel) {
 
       if (isProteinCategory && phabBetter) return `
     <div class="phab-cta">
-      <div class="phab-cta-head">Phab NutriIQ — ${PHAB_SCORE}/100</div>
+      <div class="phab-cta-head">built by phab · NutriIQ index</div>
       <h3>This food scores ${phabGap} points lower than a Phab bar</h3>
       <div class="phab-compare-row">
         <div class="compare-col">
@@ -2158,19 +2158,19 @@ function showResults(data, city, notLabel) {
 
       if (isProteinCategory) return `
     <div class="phab-cta">
-      <div class="phab-cta-head">Phab NutriIQ — ${PHAB_SCORE}/100</div>
+      <div class="phab-cta-head">built by phab · NutriIQ index</div>
       <h3>You're already eating smart 🎯</h3>
       <div style="font-size:13px; color:rgba(255,255,255,0.75); margin-bottom:1rem;">${phabGap < 0 ? `This food scores ${Math.abs(phabGap)} points higher than a Phab bar. Keep it up.` : 'This food matches a Phab bar point for point. Keep it up.'}</div>
       ${btn('Shop Phab bars →')}
     </div>`;
 
       let line;
-      if (score >= 75) line = `Solid choice — ${score}/100 is genuinely good. (Phab clocks ${PHAB_SCORE} on this same index, just saying 👀)`;
-      else if (score >= 50) line = `${score}/100 — decent, but there's room to do better. Fun fact: Phab scores ${PHAB_SCORE} on its own index. We checked. Twice.`;
+      if (score >= 75) line = `Solid choice — ${score}/100 is genuinely good. (Phab scores above industry benchmark on this same index, just saying 👀)`;
+      else if (score >= 50) line = `${score}/100 — decent, but there's room to do better. Fun fact: Phab beats the industry average on this index. We checked. Twice.`;
       else line = `${score}/100… this one isn't doing your body any favours. There happens to be an ${PHAB_SCORE}/100 option we may be <em>slightly</em> biased about.`;
       return `
     <div class="phab-cta">
-      <div class="phab-cta-head">built by phab · ${PHAB_SCORE}/100 on its own index</div>
+      <div class="phab-cta-head">built by phab · NutriIQ index</div>
       <div style="font-size:14px; color:rgba(255,255,255,0.85); line-height:1.55; margin:0.5rem 0 1rem;">${line}</div>
       ${btn('Care to grab a Phab? →')}
     </div>`;
