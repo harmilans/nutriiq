@@ -64,7 +64,11 @@
     font-size: 20px;
     color: var(--text);
     letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
+  .nav-logo img { width: 32px; height: 32px; border-radius: 8px; object-fit: cover; }
   .nav-logo span { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 6px; letter-spacing: 0; }
   .nav-right {
     display: flex;
@@ -95,16 +99,51 @@
 
   /* HERO */
   .hero {
-    background: var(--bg);
-    border-bottom: 1.5px solid var(--border);
-    padding: 3.5rem 1.5rem 3rem;
+    background: linear-gradient(160deg, #0a1a1e 0%, #0D2A30 50%, #092028 100%);
+    border-bottom: 1.5px solid rgba(0,180,200,0.25);
+    padding: 3.5rem 1.5rem 0;
     text-align: center;
     position: relative;
     overflow: hidden;
   }
-  .hero::before { display: none; }
+  .hero::before {
+    content: '';
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(0,180,200,0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
   .hero::after { display: none; }
   .hero-inner { max-width: 600px; margin: 0 auto; position: relative; z-index: 1; }
+  .hero-eyebrow { color: #00D4EA !important; background: rgba(0,180,200,0.12) !important; border-color: rgba(0,180,200,0.35) !important; }
+  .hero h1 { color: #fff !important; }
+  .hero-sub { color: rgba(255,255,255,0.65) !important; }
+  .hero-pill { background: rgba(255,255,255,0.07) !important; border-color: rgba(0,180,200,0.3) !important; color: rgba(255,255,255,0.85) !important; }
+  .scan-badge { color: rgba(255,255,255,0.7) !important; }
+  .hero-visual {
+    margin-top: 2.5rem;
+    border-radius: 18px 18px 0 0;
+    overflow: hidden;
+    max-width: 680px;
+    margin-left: auto;
+    margin-right: auto;
+    box-shadow: 0 -20px 60px rgba(0,180,200,0.2), 0 0 0 1px rgba(0,180,200,0.2);
+    position: relative;
+  }
+  .hero-visual img {
+    width: 100%;
+    display: block;
+    object-fit: cover;
+    max-height: 340px;
+  }
+  .hero-visual-overlay {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 80px;
+    background: linear-gradient(to bottom, transparent, #0D2A30);
+    pointer-events: none;
+  }
   .hero-eyebrow {
     display: inline-block;
     font-family: 'DM Sans', sans-serif;
@@ -1333,7 +1372,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo">phab <span>NutriIQ</span></div>
+  <div class="nav-logo"><img src="https://d8j0ntlcm91z4.cloudfront.net/user_3DG4DS7secfJDXb4ixs9UH3Ok01/hf_20260611_210836_c6c72273-7e08-4a7a-a5e5-2e6b529ec7ec.png" alt="NutriIQ logo">phab <span>NutriIQ</span></div>
   <div class="nav-right">
     <button class="nav-tab active" onclick="showPage('scan')">📸 Scan</button>
     <button class="nav-tab" onclick="requireFeedAuth()">📡 Live Feed</button>
@@ -1358,6 +1397,10 @@
         <span class="dot"></span>
         <span id="scan-count">Be the first to scan today</span>
       </div>
+    </div>
+    <div class="hero-visual">
+      <img src="https://d8j0ntlcm91z4.cloudfront.net/user_3DG4DS7secfJDXb4ixs9UH3Ok01/hf_20260611_210836_d13618ee-076a-443d-982a-07dfed2e6eea.png" alt="NutriIQ — AI nutrition label scanner">
+      <div class="hero-visual-overlay"></div>
     </div>
   </div>
 
