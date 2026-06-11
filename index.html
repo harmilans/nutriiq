@@ -2454,6 +2454,35 @@ function showResults(data, city, notLabel) {
       ${nutriCard('Fibre', p.fibre_g + 'g', p.fibre_g / 10 * 100, '#b87fff', 'per 100g · ' + (p.fibre_g >= 5 ? 'good' : p.fibre_g >= 2 ? 'moderate' : 'low'))}
     </div>
 
+    <!-- INGREDIENT QUALITY BADGES -->
+    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:1rem; padding:0 0.1rem;">
+      ${s.has_refined_flour === true ? `
+        <div style="display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:20px;background:#fef2f2;border:1.5px solid #fca5a5;">
+          <span style="font-size:15px;">🌾</span>
+          <span style="font-size:12px;font-weight:700;color:#dc2626;">Contains Maida</span>
+          <span style="font-size:11px;color:#ef4444;"> · refined flour, spikes blood sugar</span>
+        </div>` : s.has_refined_flour === false ? `
+        <div style="display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:20px;background:#f0fdf4;border:1.5px solid #86efac;">
+          <span style="font-size:15px;">🌾</span>
+          <span style="font-size:12px;font-weight:700;color:#16a34a;">No Maida</span>
+          <span style="font-size:11px;color:#22c55e;"> · whole grain / clean flour</span>
+        </div>` : ''}
+      ${s.has_artificial_additives ? `
+        <div style="display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:20px;background:#fef2f2;border:1.5px solid #fca5a5;">
+          <span style="font-size:15px;">🧪</span>
+          <span style="font-size:12px;font-weight:700;color:#dc2626;">Artificial Additives</span>
+        </div>` : `
+        <div style="display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:20px;background:#f0fdf4;border:1.5px solid #86efac;">
+          <span style="font-size:15px;">✅</span>
+          <span style="font-size:12px;font-weight:700;color:#16a34a;">No Artificial Additives</span>
+        </div>`}
+      ${s.has_trans_fat ? `
+        <div style="display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:20px;background:#fef2f2;border:1.5px solid #fca5a5;">
+          <span style="font-size:15px;">⚠️</span>
+          <span style="font-size:12px;font-weight:700;color:#dc2626;">Trans Fat Present</span>
+        </div>` : ''}
+    </div>
+
     <div class="breakdown-card">
       <div class="breakdown-title"><span class="icon">🔬</span> Verdict</div>
       <div class="verdict-feed">${goodRows}${badRows}${neutralRows}</div>
@@ -3044,11 +3073,12 @@ function drawShareCard(canvas, data) {
     { label: 'PROTEIN', value: data.protein_per_100kcal != null ? Number(data.protein_per_100kcal).toFixed(1)+'g' : '—', sub: '/100kcal', color: '#00B4C8' },
     { label: 'SUGAR',   value: data.per_100g?.sugar_g != null ? Number(data.per_100g.sugar_g).toFixed(1)+'g' : '—', sub: '/100g', color: score >= 70 ? '#22C55E' : '#F59E0B' },
     { label: 'CALORIES',value: data.per_100g?.calories != null ? Math.round(data.per_100g.calories)+'' : '—', sub: '/100g', color: '#b87fff' },
-    { label: 'ADDITIVES',value: data.has_artificial_additives ? 'YES' : 'NONE', sub: 'artificial', color: data.has_artificial_additives ? '#EF4444' : '#22C55E' },
+    { label: 'ADDITIVES', value: data.has_artificial_additives ? 'YES' : 'NONE', sub: 'artificial', color: data.has_artificial_additives ? '#EF4444' : '#22C55E' },
+    ...(data.has_refined_flour != null ? [{ label: 'MAIDA', value: data.has_refined_flour ? 'YES' : 'NONE', sub: 'refined flour', color: data.has_refined_flour ? '#EF4444' : '#22C55E' }] : []),
   ];
-  const mW = (W - 48 - 12*3) / 4, mH = 90;
+  const mCols = macros.length, mW = (W - 48 - 12*(mCols-1)) / mCols, mH = 90;
   macros.forEach((m, i) => {
-    const mx = 24 + i*(mW+12);
+    const mx = 24 + i * (mW + 12);
     rr(mx, statsY, mW, mH, 12);
     ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.fill();
     ctx.strokeStyle = 'rgba(255,255,255,0.09)'; ctx.lineWidth = 1; ctx.stroke();
