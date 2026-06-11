@@ -348,11 +348,19 @@
   /* LOADING STATE */
   .loading-state {
     max-width: 520px;
-    margin: 2rem auto;
+    margin: 1.5rem auto;
     text-align: center;
     display: none;
+    padding: 0 1rem;
   }
   .loading-state.active { display: block; }
+  .loading-lottie {
+    width: 180px;
+    height: 180px;
+    margin: 0 auto;
+    display: block;
+  }
+  /* Fallback spinner if Lottie fails */
   .loading-spinner {
     width: 48px;
     height: 48px;
@@ -361,20 +369,43 @@
     border-radius: 50%;
     animation: spin 0.9s linear infinite;
     margin: 0 auto 1rem;
+    display: none;
   }
+  .loading-spinner.fallback { display: block; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-steps {
+
+  /* Morphing status pill */
+  .loading-status {
+    display: inline-block;
+    margin-top: 0.5rem;
+    padding: 0.35rem 1.1rem;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 99px;
     font-family: 'Space Mono', monospace;
-    font-size: 12px;
-    color: var(--muted);
+    font-size: 11px;
+    color: var(--phab);
+    letter-spacing: 0.04em;
+    transition: opacity 0.3s;
+    min-width: 200px;
   }
-  .loading-step {
-    padding: 0.2rem 0;
-    transition: color 0.3s;
+  /* Progress track */
+  .loading-progress-wrap {
+    max-width: 260px;
+    margin: 0.75rem auto 0;
+    height: 3px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
   }
-  .loading-step.done { color: var(--green); }
-  .loading-step.active { color: var(--phab); font-weight: 700; }
-  .loading-spinner { border-top-color: var(--phab); }
+  .loading-progress-bar {
+    height: 100%;
+    width: 0%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--phab), #22C55E);
+    transition: width 0.6s ease;
+  }
+  .loading-steps { display: none; } /* hidden — replaced by status pill */
 
   /* IMAGE PREVIEW */
   .img-preview {
@@ -598,7 +629,8 @@
   .nutrient-bar-fill {
     height: 100%;
     border-radius: 3px;
-    transition: width 1s ease;
+    width: 0%;
+    transition: width 1.1s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .nutrient-note {
     font-size: 11px;
@@ -1146,6 +1178,8 @@
     color: rgba(255,255,255,0.8);
   }
 </style>
+<!-- Lottie Web player (4KB gzipped) -->
+<script src="https://unpkg.com/@lottiefiles/lottie-player@2/dist/lottie-player.js"></script>
 </head>
 <body>
 
@@ -1283,12 +1317,27 @@
   </div>
 
   <div class="loading-state" id="loading-state">
-    <div class="loading-spinner"></div>
-    <div class="loading-steps">
-      <div class="loading-step" id="step-1">🔍 Reading nutrition label...</div>
-      <div class="loading-step" id="step-2">⚗️ Calculating NutriIQ score...</div>
-      <div class="loading-step" id="step-3">🧬 Analysing ingredient quality...</div>
-      <div class="loading-step" id="step-4">📊 Updating city leaderboard...</div>
+    <!-- Lottie: DNA/molecule animation from LottieFiles CDN (free, no API key) -->
+    <lottie-player
+      id="loading-lottie"
+      class="loading-lottie"
+      src="https://assets10.lottiefiles.com/packages/lf20_kyu7xb1v.json"
+      background="transparent"
+      speed="1"
+      loop
+      autoplay>
+    </lottie-player>
+    <div class="loading-spinner" id="loading-spinner-fallback"></div>
+    <div class="loading-status" id="loading-status">Reading label…</div>
+    <div class="loading-progress-wrap">
+      <div class="loading-progress-bar" id="loading-progress-bar"></div>
+    </div>
+    <!-- hidden steps still used by old JS for compat -->
+    <div class="loading-steps" style="display:none;">
+      <div class="loading-step" id="step-1"></div>
+      <div class="loading-step" id="step-2"></div>
+      <div class="loading-step" id="step-3"></div>
+      <div class="loading-step" id="step-4"></div>
     </div>
   </div>
 
@@ -1314,8 +1363,15 @@
     <button id="compare-add-btn" onclick="addCompareSlot()" style="width:100%; padding:0.65rem; border:2px dashed var(--border); border-radius:10px; background:transparent; color:var(--muted); font-size:14px; cursor:pointer; margin-bottom:0.75rem;">＋ Add another product</button>
     <button class="btn-analyze" id="compare-btn" onclick="runCompare()" disabled style="width:100%;">⚖️ Compare products →</button>
     <div class="loading-state" id="compare-loading" style="margin-top:1rem;">
-      <div class="loading-spinner"></div>
-      <div style="text-align:center; font-size:14px; color:var(--muted);" id="compare-loading-text">Analysing products…</div>
+      <lottie-player
+        class="loading-lottie"
+        src="https://assets10.lottiefiles.com/packages/lf20_kyu7xb1v.json"
+        background="transparent" speed="1" loop autoplay>
+      </lottie-player>
+      <div class="loading-status" id="compare-loading-text">Analysing products…</div>
+      <div class="loading-progress-wrap">
+        <div class="loading-progress-bar" id="compare-progress-bar"></div>
+      </div>
     </div>
     <div id="compare-results" style="margin-top:1.5rem;"></div>
   </div>
@@ -1952,18 +2008,34 @@ async function analyzeImage() {
   const dbgPanel = document.getElementById('debug-panel');
   if (dbgPanel) dbgPanel.style.display = 'none';
 
-  // Animate loading steps
-  const steps = ['step-1', 'step-2', 'step-3', 'step-4'];
+  // Lottie fallback: if player not loaded, show spinner
+  const lottieEl = document.getElementById('loading-lottie');
+  if (lottieEl && !customElements.get('lottie-player')) {
+    lottieEl.style.display = 'none';
+    document.getElementById('loading-spinner-fallback').classList.add('fallback');
+  }
+
+  // Animated status pill + progress bar
+  const STATUS_STEPS = [
+    { text: '🔍 Reading nutrition label…', pct: 15 },
+    { text: '⚗️ Calculating NutriIQ score…', pct: 40 },
+    { text: '🧬 Analysing ingredient quality…', pct: 65 },
+    { text: '📊 Compiling your report…', pct: 88 },
+  ];
+  const statusEl = document.getElementById('loading-status');
+  const progressEl = document.getElementById('loading-progress-bar');
   let stepIdx = 0;
-  const stepInterval = setInterval(() => {
-    if (stepIdx > 0) document.getElementById(steps[stepIdx-1]).classList.remove('active');
-    if (stepIdx < steps.length) {
-      document.getElementById(steps[stepIdx]).classList.add('active');
-      if (stepIdx > 0) document.getElementById(steps[stepIdx-1]).classList.add('done');
+  function advanceStatus() {
+    if (stepIdx < STATUS_STEPS.length) {
+      const s = STATUS_STEPS[stepIdx++];
+      if (statusEl) { statusEl.style.opacity = 0; setTimeout(() => { statusEl.textContent = s.text; statusEl.style.opacity = 1; }, 150); }
+      if (progressEl) progressEl.style.width = s.pct + '%';
     }
-    stepIdx++;
-    if (stepIdx >= steps.length) clearInterval(stepInterval);
-  }, 900);
+  }
+  advanceStatus();
+  const stepInterval = setInterval(advanceStatus, 1800);
+  // compat shim — old code references these, keep them harmless
+  const steps = ['step-1','step-2','step-3','step-4'];
 
   try {
     const response = await fetch('/api/analyze', {
@@ -1982,7 +2054,10 @@ async function analyzeImage() {
 
     const rawText = await response.text();
     clearInterval(stepInterval);
-    steps.forEach(s => { document.getElementById(s).classList.add('done'); document.getElementById(s).classList.remove('active'); });
+    // Flash progress to 100% then hide
+    if (progressEl) progressEl.style.width = '100%';
+    if (statusEl) { statusEl.style.opacity = 0; setTimeout(() => { statusEl.textContent = '✓ Done!'; statusEl.style.opacity = 1; }, 150); }
+    await new Promise(r => setTimeout(r, 400));
     document.getElementById('loading-state').classList.remove('active');
 
     let result;
@@ -2208,6 +2283,9 @@ function showResults(data, city, notLabel) {
     animateScoreCount(score, strokeColor);
   }, 100);
 
+  // Animate nutrient bars + count-up values (staggered)
+  setTimeout(() => animateNutrientCards(), 300);
+
   // Celebrate excellent scores
   if (score >= 75) setTimeout(() => burstConfetti(), 1100);
 }
@@ -2224,6 +2302,44 @@ function animateScoreCount(target, color) {
     el.textContent = Math.round(target * eased);
     if (p < 1) requestAnimationFrame(tick);
   })(t0);
+}
+
+function animateNutrientCards() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    // Just set final values immediately
+    document.querySelectorAll('#results-wrap .nutrient-val[data-target]').forEach(el => {
+      el.textContent = el.dataset.target + el.dataset.suffix;
+    });
+    document.querySelectorAll('#results-wrap .nutrient-bar-fill[data-pct]').forEach(el => {
+      el.style.width = el.dataset.pct + '%';
+    });
+    return;
+  }
+  const cards = document.querySelectorAll('#results-wrap .nutrient-card');
+  cards.forEach((card, i) => {
+    const valEl = card.querySelector('.nutrient-val[data-target]');
+    const barEl = card.querySelector('.nutrient-bar-fill[data-pct]');
+    const delay = 120 + i * 110; // stagger each card
+
+    if (barEl) setTimeout(() => { barEl.style.width = barEl.dataset.pct + '%'; }, delay);
+
+    if (valEl) {
+      const target = parseFloat(valEl.dataset.target);
+      const suffix = valEl.dataset.suffix || '';
+      const isInt = Number.isInteger(target) || suffix.includes('kcal');
+      const D = 900;
+      setTimeout(() => {
+        const t0 = performance.now();
+        (function tick(now) {
+          const p = Math.min((now - t0) / D, 1);
+          const eased = 1 - Math.pow(1 - p, 3);
+          const v = target * eased;
+          valEl.textContent = (isInt ? Math.round(v) : v.toFixed(1)) + suffix;
+          if (p < 1) requestAnimationFrame(tick);
+        })(t0);
+      }, delay);
+    }
+  });
 }
 
 // Lightweight canvas confetti burst from the score ring
@@ -2263,12 +2379,19 @@ function burstConfetti() {
 
 function nutriCard(label, value, pct, color, note) {
   const clampedPct = Math.min(Math.max(pct, 0), 100);
+  // Parse numeric part for count-up (e.g. "10.2g" → 10.2, "423 kcal" → 423)
+  const numMatch = String(value).match(/^([\d.]+)/);
+  const numVal = numMatch ? parseFloat(numMatch[1]) : null;
+  const numSuffix = numMatch ? String(value).slice(numMatch[1].length) : '';
+  const dataAttrs = numVal != null
+    ? `data-target="${numVal}" data-suffix="${numSuffix}" data-pct="${clampedPct}"`
+    : '';
   return `
     <div class="nutrient-card">
       <div class="nutrient-label">${label}</div>
-      <div class="nutrient-val" style="color:${color}">${value}</div>
+      <div class="nutrient-val" style="color:${color}" ${dataAttrs}>${numVal != null ? '0' + numSuffix : value}</div>
       <div class="nutrient-bar-bg">
-        <div class="nutrient-bar-fill" style="width:${clampedPct}%; background:${color}"></div>
+        <div class="nutrient-bar-fill" style="background:${color}" data-pct="${clampedPct}"></div>
       </div>
       <div class="nutrient-note">${note}</div>
     </div>`;
