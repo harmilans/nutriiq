@@ -14,7 +14,8 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: 'Too many requests. Try again later.' });
   }
 
-  const { imageBase64, imageType, city, productName, frontImageBase64, frontImageType, skipPersist } = req.body || {};
+  const { imageBase64, imageType, city, productName, frontImageBase64, frontImageType, skipPersist, lang } = req.body || {};
+  const useHinglish = lang === 'hinglish';
 
   // Validate image inputs
   const imgErr = validateImageInput(imageBase64, imageType);
@@ -56,7 +57,8 @@ SUGAR SOURCE INTELLIGENCE — read the ingredients list if visible in the photo 
 - SCORING: penalise added/refined/syrup sugar heavily; penalise natural fruit/dairy sugars only lightly (~30-40% of refined penalty) — whole dates carry fibre and polyphenols that blunt the glycaemic spike. Note: date SYRUP is processed and counts as "syrup", not natural.
 - Mention the sugar source in verdicts when relevant (e.g. "Sweetened with whole dates, not refined sugar").
 
-body_impact tone rules:
+${useHinglish ? `LANGUAGE: Write body_impact, all verdicts (good/bad/neutral), estimate_basis, and claims_audit verdict in casual HINGLISH (Hindi-English mix, Latin script, like a Mumbai friend talking — "protein solid hai, par cheeni thodi zyada hai boss"). Keep numbers, units, and nutrient names in English. All JSON keys and other fields stay in English.
+` : ''}body_impact tone rules:
 - nutri_iq_score >= 75: positive, energising — "clean fuel", "muscles will thank you", sustained energy
 - nutri_iq_score 50–74: balanced — note what's good and what to watch
 - nutri_iq_score < 50: cautionary — spike, crash, additive load etc.
