@@ -14,11 +14,19 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: 'Too many requests. Try again later.' });
   }
 
-  const { imageBase64, imageType, city, productName } = req.body || {};
+  const { imageBase64, imageType, city, productName, frontImageBase64, frontImageType, skipPersist } = req.body || {};
 
   // Validate image inputs
   const imgErr = validateImageInput(imageBase64, imageType);
   if (imgErr) return res.status(400).json({ error: imgErr });
+
+  // Optional front-of-pack photo for claims-vs-reality audit
+  let hasFront = false;
+  if (frontImageBase64) {
+    const frontErr = validateImageInput(frontImageBase64, frontImageType);
+    if (frontErr) return res.status(400).json({ error: 'Front photo: ' + frontErr });
+    hasFront = true;
+  }
 
   // Sanitize text inputs — strip HTML/script characters, enforce max lengths
   const safeCity = sanitizeText(city, 60);
@@ -37,6 +45,12 @@ Only set "not_a_food_label": true if the image contains NO food packaging whatso
 
 NOTE on per_100g: ALL numeric values must be normalised to per-100g basis regardless of serving size printed on label.
 Also extract the actual serving size (e.g. 40g) and per-serving protein so the UI can show both.
+
+SUGAR SOURCE INTELLIGENCE — read the ingredients list if visible in the photo (it is usually next to the nutrition table):
+- Determine sugar_source: "refined" (sugar/sucrose/glucose), "syrup" (glucose syrup, maltodextrin, invert syrup, date syrup/paste concentrate), "natural_fruit" (whole dates, raisins, fruit), "dairy" (lactose from milk solids), "mixed", or "unknown" (ingredients not visible).
+- Use the label's ADDED SUGARS line when present: added=0 with total>0 means natural sugars.
+- SCORING: penalise added/refined/syrup sugar heavily; penalise natural fruit/dairy sugars only lightly (~30-40% of refined penalty) — whole dates carry fibre and polyphenols that blunt the glycaemic spike. Note: date SYRUP is processed and counts as "syrup", not natural.
+- Mention the sugar source in verdicts when relevant (e.g. "Sweetened with whole dates, not refined sugar").
 
 body_impact tone rules:
 - nutri_iq_score >= 75: positive, energising — "clean fuel", "muscles will thank you", sustained energy
@@ -65,6 +79,9 @@ Required shape:
   "score_color": "great|ok|bad",
   "protein_per_100kcal": number,
   "gl_index": number,
+  "added_sugar_g": number (per 100g, from ADDED SUGARS line if shown, else estimate from ingredients; null if unknowable),
+  "sugar_source": "refined|syrup|natural_fruit|dairy|mixed|unknown",
+  "claims_audit": ${hasFront ? '{ "claims": ["each marketing claim found on the front of pack"], "verdict": "1-2 sentences: do the back-of-pack numbers support the front-of-pack claims? Call out any gap bluntly." }' : 'null (no front-of-pack photo provided)'},
   "verdicts": {
     "good": ["2-3 specific positive findings with numbers"],
     "bad": ["2-3 specific negative findings with numbers"],
@@ -97,7 +114,8 @@ Required shape:
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: imageType, data: imageBase64 } },
-            { type: 'text', text: USER_PROMPT }
+            ...(hasFront ? [{ type: 'image', source: { type: 'base64', media_type: frontImageType, data: frontImageBase64 } }] : []),
+            { type: 'text', text: (hasFront ? 'The first image is the back-of-pack nutrition label. The second image is the FRONT of the pack — audit its marketing claims against the label.\n\n' : '') + USER_PROMPT }
           ]
         }]
       })
@@ -122,7 +140,7 @@ Required shape:
     }
 
     // Persist to Supabase (including photo if storage is configured)
-    if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY && !result.not_a_food_label) {
+    if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY && !result.not_a_food_label && !skipPersist) {
       try {
         const imageUrl = await persistScan(result, safeCity, ip, imageBase64, imageType);
         result._saved = true;
