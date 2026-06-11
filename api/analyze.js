@@ -57,6 +57,13 @@ SUGAR SOURCE INTELLIGENCE — read the ingredients list if visible in the photo 
 - SCORING: penalise added/refined/syrup sugar heavily; penalise natural fruit/dairy sugars only lightly (~30-40% of refined penalty) — whole dates carry fibre and polyphenols that blunt the glycaemic spike. Note: date SYRUP is processed and counts as "syrup", not natural.
 - Mention the sugar source in verdicts when relevant (e.g. "Sweetened with whole dates, not refined sugar").
 
+REFINED FLOUR (MAIDA) DETECTION — read the ingredients list:
+- Set "has_refined_flour": true if the ingredients contain maida, refined wheat flour, enriched flour, bleached flour, all-purpose flour, or white flour.
+- Set "has_refined_flour": false if only whole wheat flour, oat flour, almond flour, ragi, jowar, bajra, or other whole-grain/alternative flours are used.
+- Set "has_refined_flour": null if ingredients are not visible and the product is not an obvious baked good/biscuit/bread.
+- SCORING: penalise refined flour as part of the additive penalty — it strips fibre and micronutrients, spikes blood sugar similarly to refined sugar. If both refined flour AND refined sugar are present, increase the glycaemic load penalty.
+- Mention maida in verdicts when found (e.g. "Made with maida — a refined flour that strips fibre and spikes blood sugar like sugar").
+
 ${useHinglish ? `LANGUAGE: Write body_impact, all verdicts (good/bad/neutral), estimate_basis, and claims_audit verdict in casual HINGLISH (Hindi-English mix, Latin script, like a Mumbai friend talking — "protein solid hai, par cheeni thodi zyada hai boss"). Keep numbers, units, and nutrient names in English. All JSON keys and other fields stay in English.
 ` : ''}body_impact tone rules:
 - nutri_iq_score >= 75: positive, energising — "clean fuel", "muscles will thank you", sustained energy
@@ -80,6 +87,7 @@ Required shape:
   "ingredients_count": number,
   "has_artificial_additives": boolean,
   "has_trans_fat": boolean,
+  "has_refined_flour": boolean or null (true = maida/refined wheat flour detected in ingredients; null = ingredients not visible),
   "nutri_iq_score": number (0-100, weighted: protein efficiency 30% + glycaemic load 20% + additive penalty 20% + fat quality 15% + fibre bonus 10% + transparency 5%),
   "score_grade": "Excellent|Good|Decent|Poor|Harmful",
   "score_color": "great|ok|bad",
