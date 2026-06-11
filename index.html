@@ -1214,10 +1214,11 @@
 
   <!-- COMPARE MODE -->
   <div id="compare-section" style="display:none; max-width:520px; margin:0 auto; padding:0 1rem;">
-    <p style="font-size:14px; color:var(--muted); text-align:center; margin-bottom:1rem;">Standing in the aisle with two options? Snap both labels and we'll pick the winner.</p>
-    <div id="compare-slots" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:1rem;">
+    <p style="font-size:14px; color:var(--muted); text-align:center; margin-bottom:1rem;">Snap 2–4 labels and we'll pick the winner with full nutrition breakdown.</p>
+    <div id="compare-slots" style="display:flex; flex-direction:column; gap:12px; margin-bottom:1rem;">
       <!-- slots injected by JS -->
     </div>
+    <button id="compare-add-btn" onclick="addCompareSlot()" style="width:100%; padding:0.65rem; border:2px dashed var(--border); border-radius:10px; background:transparent; color:var(--muted); font-size:14px; cursor:pointer; margin-bottom:0.75rem;">＋ Add another product</button>
     <button class="btn-analyze" id="compare-btn" onclick="runCompare()" disabled style="width:100%;">⚖️ Compare products →</button>
     <div class="loading-state" id="compare-loading" style="margin-top:1rem;">
       <div class="loading-spinner"></div>
@@ -1243,12 +1244,12 @@
 
     <div id="lb-tab-desc" style="margin-bottom:1rem; padding:0.75rem 1.1rem; background:var(--phab-light); border-radius:10px; font-size:13px; color:var(--text); line-height:1.5;"></div>
 
-    <!-- Phab benchmark banner -->
+    <!-- Index benchmark banner -->
     <div id="lb-benchmark" style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem; padding:0.75rem 1.1rem; background:#fff; border:1.5px solid var(--phab); border-radius:10px; font-size:13px;">
-      <span style="font-size:1.4rem;">🏅</span>
+      <span style="font-size:1.4rem;">📐</span>
       <div>
-        <strong style="color:var(--phab);" id="lb-bench-label">Phab bar benchmark: 82 / 100</strong><br>
-        <span style="color:var(--muted);" id="lb-bench-sub">Cities above this line eat smarter than a Phab bar on average.</span>
+        <strong style="color:var(--phab);" id="lb-bench-label">NutriIQ Index benchmark: 70 / 100</strong><br>
+        <span style="color:var(--muted);" id="lb-bench-sub">Cities above this line consistently choose healthy food on average.</span>
       </div>
     </div>
 
@@ -1365,7 +1366,8 @@ let uploadedImageType = null;
 let frontImageBase64 = null;
 let currentResults = null;
 let lbMode = 'overall';
-let compareSlots = [null, null, null]; // {base64, preview, name}
+// each slot: {back: {base64, preview}|null, front: {base64, preview}|null, name: string}
+let compareSlots = [{back:null,front:null,name:''},{back:null,front:null,name:''}];
 
 // Resize + compress any image file to max 1200px JPEG 80%, callback(base64, dataUrl)
 function compressFile(file, cb) {
@@ -1611,38 +1613,94 @@ function setScanMode(mode) {
 function renderCompareSlots() {
   const wrap = document.getElementById('compare-slots');
   wrap.innerHTML = compareSlots.map((slot, i) => {
-    const required = i < 2;
-    if (slot) {
-      return `<div style="position:relative; border:2px solid var(--phab); border-radius:12px; overflow:hidden; aspect-ratio:3/4; background:var(--surface);">
-        <img src="${slot.preview}" style="width:100%; height:100%; object-fit:cover;">
-        <button onclick="clearCompareSlot(${i})" style="position:absolute; top:6px; right:6px; width:24px; height:24px; border-radius:50%; border:none; background:rgba(0,0,0,0.6); color:#fff; cursor:pointer; font-size:12px;">✕</button>
-        <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6); color:#fff; font-size:11px; padding:4px 6px; text-align:center;">${String.fromCharCode(65+i)}</div>
-      </div>`;
-    }
-    return `<label style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; border:2px dashed ${required ? 'var(--phab)' : 'var(--border)'}; border-radius:12px; aspect-ratio:3/4; cursor:pointer; background:var(--surface); color:var(--muted); font-size:12px; text-align:center; padding:6px;">
-      <span style="font-size:22px;">📷</span>
-      <span>Product ${String.fromCharCode(65+i)}${required ? '' : '<br>(optional)'}</span>
-      <input type="file" accept="image/*" style="display:none;" onchange="handleCompareFile(${i}, this.files[0])">
-    </label>`;
+    const label = String.fromCharCode(65 + i);
+    const canRemove = compareSlots.length > 2;
+    return `
+    <div style="background:var(--surface); border:1.5px solid var(--border); border-radius:14px; padding:1rem; position:relative;">
+      ${canRemove ? `<button onclick="removeCompareSlot(${i})" title="Remove" style="position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:50%;border:none;background:var(--surface2);color:var(--muted);font-size:12px;cursor:pointer;line-height:1;">✕</button>` : ''}
+      <div style="font-size:11px;font-weight:700;color:var(--phab);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.65rem;">Product ${label}</div>
+
+      <!-- Back photo (required) -->
+      <div style="margin-bottom:0.65rem;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Back-of-pack label <span style="color:var(--red);">*</span></div>
+        ${slot.back ? `
+          <div style="position:relative;display:inline-block;width:100%;">
+            <img src="${slot.back.preview}" style="width:100%;max-height:180px;object-fit:cover;border-radius:8px;display:block;">
+            <button onclick="clearCompareBack(${i})" style="position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:#fff;cursor:pointer;font-size:12px;">✕</button>
+          </div>` : `
+          <label style="display:flex;align-items:center;gap:8px;border:2px dashed var(--phab);border-radius:8px;padding:0.65rem 0.85rem;cursor:pointer;background:transparent;color:var(--muted);font-size:13px;">
+            <span style="font-size:18px;">📷</span> Tap to add label photo
+            <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="handleCompareBack(${i}, this.files[0])">
+          </label>`}
+      </div>
+
+      <!-- Front photo (optional) -->
+      <div style="margin-bottom:0.65rem;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Front of pack <span style="color:var(--muted);font-style:italic;">(optional — for claims audit)</span></div>
+        ${slot.front ? `
+          <div style="position:relative;display:inline-block;width:100%;">
+            <img src="${slot.front.preview}" style="width:100%;max-height:120px;object-fit:cover;border-radius:8px;display:block;">
+            <button onclick="clearCompareFront(${i})" style="position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:#fff;cursor:pointer;font-size:12px;">✕</button>
+          </div>` : `
+          <label style="display:flex;align-items:center;gap:8px;border:1.5px dashed var(--border);border-radius:8px;padding:0.5rem 0.85rem;cursor:pointer;background:transparent;color:var(--muted);font-size:12px;">
+            <span style="font-size:14px;">＋</span> Add front photo
+            <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="handleCompareFront(${i}, this.files[0])">
+          </label>`}
+      </div>
+
+      <!-- Product name (optional) -->
+      <input type="text" placeholder="Product name (optional)" value="${slot.name || ''}"
+        oninput="compareSlots[${i}].name = this.value"
+        style="width:100%;box-sizing:border-box;padding:0.5rem 0.75rem;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text);font-family:inherit;">
+    </div>`;
   }).join('');
-  document.getElementById('compare-btn').disabled = !(compareSlots[0] && compareSlots[1]);
+
+  const addBtn = document.getElementById('compare-add-btn');
+  if (addBtn) addBtn.style.display = compareSlots.length >= 4 ? 'none' : 'block';
+
+  const filledCount = compareSlots.filter(s => s.back).length;
+  document.getElementById('compare-btn').disabled = filledCount < 2;
 }
 
-function handleCompareFile(i, file) {
+function handleCompareBack(i, file) {
   if (!file) return;
   compressFile(file, (b64, dataUrl) => {
-    compareSlots[i] = { base64: b64, preview: dataUrl };
+    compareSlots[i].back = { base64: b64, preview: dataUrl };
     renderCompareSlots();
   });
 }
 
-function clearCompareSlot(i) {
-  compareSlots[i] = null;
+function clearCompareBack(i) {
+  compareSlots[i].back = null;
+  renderCompareSlots();
+}
+
+function handleCompareFront(i, file) {
+  if (!file) return;
+  compressFile(file, (b64, dataUrl) => {
+    compareSlots[i].front = { base64: b64, preview: dataUrl };
+    renderCompareSlots();
+  });
+}
+
+function clearCompareFront(i) {
+  compareSlots[i].front = null;
+  renderCompareSlots();
+}
+
+function addCompareSlot() {
+  if (compareSlots.length >= 4) return;
+  compareSlots.push({ back: null, front: null, name: '' });
+  renderCompareSlots();
+}
+
+function removeCompareSlot(i) {
+  compareSlots.splice(i, 1);
   renderCompareSlots();
 }
 
 async function runCompare() {
-  const filled = compareSlots.map((s, i) => s ? { ...s, idx: i } : null).filter(Boolean);
+  const filled = compareSlots.map((s, i) => s.back ? { ...s, idx: i } : null).filter(Boolean);
   if (filled.length < 2) return;
 
   const city = document.getElementById('city-value').value.trim() || null;
@@ -1653,16 +1711,17 @@ async function runCompare() {
   const results = [];
   try {
     for (let n = 0; n < filled.length; n++) {
-      document.getElementById('compare-loading-text').textContent = `Analysing product ${String.fromCharCode(65 + filled[n].idx)} (${n+1}/${filled.length})…`;
-      const resp = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: filled[n].base64, imageType: 'image/jpeg', city })
-      });
+      const s = filled[n];
+      const label = String.fromCharCode(65 + s.idx);
+      document.getElementById('compare-loading-text').textContent = `Analysing product ${label} (${n+1}/${filled.length})…`;
+      const body = { imageBase64: s.back.base64, imageType: 'image/jpeg', city, skipPersist: true };
+      if (s.front) { body.frontImageBase64 = s.front.base64; body.frontImageType = 'image/jpeg'; }
+      if (s.name && s.name.trim()) body.productName = s.name.trim();
+      const resp = await fetch('/api/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await resp.json();
       if (!resp.ok || data.error) throw new Error(data.error || 'Analysis failed');
-      if (data.not_a_food_label) throw new Error(`Product ${String.fromCharCode(65 + filled[n].idx)}: that photo doesn't look like a food label.`);
-      results.push({ ...data, _slot: String.fromCharCode(65 + filled[n].idx) });
+      if (data.not_a_food_label) throw new Error(`Product ${label}: that photo doesn't look like a food label.`);
+      results.push({ ...data, _slot: label, _preview: s.back.preview });
     }
     renderCompareResults(results);
     updateScanCount();
@@ -1703,7 +1762,9 @@ function renderCompareResults(results) {
       <table style="width:100%; border-collapse:collapse;">
         <thead><tr>
           <th></th>
-          ${cols.map(c => `<th style="padding:10px; font-size:12px; ${c._isPhab ? 'background:rgba(0,180,200,0.12); color:var(--phab);' : 'color:var(--text);'}">${c._isPhab ? '✦ Phab' : 'Product ' + c._slot}<br><span style="font-weight:400; color:var(--muted); font-size:10px;">${(c.product_name||'').slice(0,20)}</span></th>`).join('')}
+          ${cols.map(c => `<th style="padding:10px; font-size:12px; ${c._isPhab ? 'background:rgba(0,180,200,0.12); color:var(--phab);' : 'color:var(--text);'}">
+          ${c._isPhab ? '✦ Phab' : `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">${c._preview ? `<img src="${c._preview}" style="width:48px;height:60px;object-fit:cover;border-radius:6px;border:1.5px solid var(--border);">` : ''}Product ${c._slot}</div>`}
+          <br><span style="font-weight:400; color:var(--muted); font-size:10px;">${(c.product_name||'').slice(0,20)}</span></th>`).join('')}
         </tr></thead>
         <tbody>
           ${row('NutriIQ score', c => `<span style="color:${(c.nutri_iq_score??0) >= 70 ? '#1db96a' : (c.nutri_iq_score??0) >= 45 ? '#e8a030' : '#e85050'}">${c.nutri_iq_score ?? '—'}</span>`)}
@@ -2007,39 +2068,39 @@ function nutriCard(label, value, pct, color, note) {
 // ===================== LEADERBOARD =====================
 const LB_META = {
   overall: {
-    desc: '🧬 <strong>Overall NutriIQ</strong> — composite score (0–100) weighing protein efficiency, glycaemic load, additive penalty, fat quality, fibre, and label transparency. Higher = healthier food choices.',
-    phabScore: 82,
-    phabLabel: 'Phab bar benchmark: 82 / 100',
-    phabSub: 'Cities above this line eat smarter than a Phab bar on average.',
+    desc: '🧬 <strong>Overall NutriIQ</strong> — composite score (0–100) weighing protein efficiency, glycaemic load, additive penalty, fat quality, fibre, and label transparency. Index benchmark: 70 = healthy threshold.',
+    indexScore: 70,
+    indexLabel: 'NutriIQ Index benchmark: 70 / 100',
+    indexSub: 'Cities above 70 consistently choose healthy food on average.',
     unit: '',
     gradeLabel: score => score >= 75 ? '🟢 Smart' : score >= 55 ? '🟡 Average' : '🔴 Needs work',
-    vsPhabText: (score) => {
-      const diff = Math.abs(score - 82).toFixed(2);
-      return score >= 82 ? `+${diff} above Phab 🏆` : `-${diff} below Phab`;
+    vsIndexText: (score) => {
+      const diff = Math.abs(score - 70).toFixed(1);
+      return score >= 70 ? `+${diff} above index 🏆` : `-${diff} below index`;
     }
   },
   protein: {
-    desc: '💪 <strong>Protein Score</strong> — average grams of protein per 100 kcal across all scanned products. Measures how protein-efficient the city\'s food choices are. Phab bar = 5.9g / 100 kcal.',
-    phabScore: 5.9,
-    phabLabel: 'Phab bar benchmark: 5.9g protein / 100 kcal',
-    phabSub: 'Above this = eating as protein-efficiently as a Phab bar.',
+    desc: '💪 <strong>Protein Score</strong> — average grams of protein per 100 kcal across all scanned products. Measures how protein-efficient the city\'s food choices are. Index benchmark: 4.0g / 100 kcal.',
+    indexScore: 4.0,
+    indexLabel: 'NutriIQ Index benchmark: 4.0g protein / 100 kcal',
+    indexSub: 'Above 4g/100kcal = protein-efficient food choices.',
     unit: 'g/100kcal',
     gradeLabel: score => score >= 5 ? '🟢 High protein' : score >= 3 ? '🟡 Moderate' : '🔴 Low protein',
-    vsPhabText: (score) => {
-      const diff = Math.abs(score - 5.9).toFixed(2);
-      return score >= 5.9 ? `+${diff}g above Phab 🏆` : `-${diff}g below Phab`;
+    vsIndexText: (score) => {
+      const diff = Math.abs(score - 4.0).toFixed(2);
+      return score >= 4.0 ? `+${diff}g above index 🏆` : `-${diff}g below index`;
     }
   },
   sugar: {
-    desc: '🩸 <strong>Sugar Avoidance</strong> — score = 100 minus average total sugar per 100g. Lower sugar = higher score. Phab bar has 8.48g total sugar per 100g (0g added sugars), scoring 91.52.',
-    phabScore: 91.52,
-    phabLabel: 'Phab bar benchmark: 8.48g total sugar → Score 91.52',
-    phabSub: 'Zero added sugar, natural sugars only — very low glycaemic impact.',
+    desc: '🩸 <strong>Sugar Avoidance</strong> — score = 100 minus average total sugar per 100g. Lower sugar = higher score. Index benchmark: 80 (≤20g total sugar per 100g).',
+    indexScore: 80,
+    indexLabel: 'NutriIQ Index benchmark: 80 / 100',
+    indexSub: 'Score above 80 means the city averages ≤20g sugar per 100g of food scanned.',
     unit: '',
     gradeLabel: score => score >= 85 ? '🟢 Sugar smart' : score >= 65 ? '🟡 Moderate' : '🔴 High sugar',
-    vsPhabText: (score) => {
-      const diff = Math.abs(score - 91.52).toFixed(2);
-      return score >= 91.52 ? `+${diff} above Phab 🏆` : `-${diff} pts vs Phab`;
+    vsIndexText: (score) => {
+      const diff = Math.abs(score - 80).toFixed(1);
+      return score >= 80 ? `+${diff} above index 🏆` : `-${diff} pts below index`;
     }
   }
 };
@@ -2050,8 +2111,8 @@ async function renderLeaderboard() {
 
   const meta = LB_META[lbMode];
   document.getElementById('lb-tab-desc').innerHTML = meta.desc;
-  document.getElementById('lb-bench-label').textContent = meta.phabLabel;
-  document.getElementById('lb-bench-sub').textContent = meta.phabSub;
+  document.getElementById('lb-bench-label').textContent = meta.indexLabel;
+  document.getElementById('lb-bench-sub').textContent = meta.indexSub;
 
   try {
     const res = await fetch(`/api/leaderboard?mode=${lbMode}`);
@@ -2065,7 +2126,7 @@ async function renderLeaderboard() {
       return;
     }
     const data = json.data;
-    const maxScore = Math.max(data[0].avg_score, meta.phabScore);
+    const maxScore = Math.max(data[0].avg_score, meta.indexScore);
     lb.innerHTML = data.map((row, i) => {
       const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
       const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
@@ -2073,10 +2134,10 @@ async function renderLeaderboard() {
       const trendClass = trend >= 0 ? 'trend-up' : 'trend-down';
       const trendArrow = trend >= 0 ? '↑' : '↓';
       const barPct = Math.min((row.avg_score / maxScore) * 100, 100);
-      const phabBarPct = Math.min((meta.phabScore / maxScore) * 100, 100);
+      const indexBarPct = Math.min((meta.indexScore / maxScore) * 100, 100);
       const grade = meta.gradeLabel(row.avg_score);
-      const vsPhab = meta.vsPhabText(row.avg_score);
-      const vsPhabColor = row.avg_score >= meta.phabScore ? '#00B4C8' : '#e74c3c';
+      const vsIndex = meta.vsIndexText(row.avg_score);
+      const vsIndexColor = row.avg_score >= meta.indexScore ? '#00B4C8' : '#e74c3c';
       return `
         <div class="lb-row">
           <div class="lb-rank ${rankClass}">${rankLabel}</div>
@@ -2088,11 +2149,11 @@ async function renderLeaderboard() {
             <div class="lb-city-meta">
               ${Number(row.scan_count).toLocaleString()} scan${row.scan_count !== 1 ? 's' : ''} &nbsp;·&nbsp;
               <span class="${trendClass}">${trendArrow} ${Math.abs(trend).toFixed(1)} vs last 7d</span> &nbsp;·&nbsp;
-              <span style="color:${vsPhabColor};font-weight:600;">${vsPhab}</span>
+              <span style="color:${vsIndexColor};font-weight:600;">${vsIndex}</span>
             </div>
             <div class="lb-bar-wrap" style="position:relative;">
               <div class="lb-bar" style="width:${barPct}%"></div>
-              <div style="position:absolute;top:0;left:${phabBarPct}%;height:100%;width:2px;background:var(--phab);opacity:0.6;" title="Phab benchmark"></div>
+              <div style="position:absolute;top:0;left:${indexBarPct}%;height:100%;width:2px;background:var(--phab);opacity:0.6;" title="NutriIQ Index"></div>
             </div>
           </div>
           <div class="lb-score-col">
