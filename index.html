@@ -2916,254 +2916,229 @@ function downloadShareCard() {
 }
 
 function drawShareCard(canvas, data) {
-  // Card is 540×960 (9:16 ratio, renders crisply on mobile)
   const W = 540, H = 960;
-  canvas.width = W;
-  canvas.height = H;
+  canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
+  const cx = W / 2;
 
-  // ---- Helpers ----
-  function roundRect(x, y, w, h, r) {
+  const score = Math.round(data.nutri_iq_score || 0);
+  const scoreColor = score >= 75 ? '#22C55E' : score >= 50 ? '#F59E0B' : '#EF4444';
+  const persona = data._persona || { emoji: '🔮', name: 'Mystery Muncher' };
+  const percentile = estimatePercentile(score);
+  const punch = data._punch || '';
+
+  // ─── helpers ───────────────────────────────────────────────────────────────
+  function rr(x, y, w, h, r) {
     ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    ctx.lineTo(x + r, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
     ctx.closePath();
   }
-
-  function wrapText(text, x, y, maxWidth, lineHeight) {
-    const words = String(text).split(' ');
-    let line = '';
-    for (let i = 0; i < words.length; i++) {
-      const test = line + (line ? ' ' : '') + words[i];
-      if (ctx.measureText(test).width > maxWidth && line) {
-        ctx.fillText(line, x, y);
-        line = words[i];
-        y += lineHeight;
-      } else { line = test; }
+  function wrapText(txt, x, y, maxW, lh) {
+    const words = String(txt).split(' '); let line = '';
+    for (const w of words) {
+      const test = line ? line+' '+w : w;
+      if (ctx.measureText(test).width > maxW && line) { ctx.fillText(line,x,y); line=w; y+=lh; }
+      else line = test;
     }
-    if (line) ctx.fillText(line, x, y);
-    return y;
+    if (line) ctx.fillText(line,x,y); return y;
   }
 
-  // ---- Score color ----
-  const score = Math.round(data.nutri_iq_score || 0);
-  const scoreColor = score >= 75 ? '#1db96a' : score >= 50 ? '#e8a030' : '#e84040';
-
-  // ---- Dark background ----
-  ctx.fillStyle = '#0D1117';
+  // ─── ZONE 1 · full-bleed background + radial glow ─────────────────────────
+  ctx.fillStyle = '#080B10';
   ctx.fillRect(0, 0, W, H);
 
-  // ---- Subtle radial glow behind score circle ----
-  const glow = ctx.createRadialGradient(W / 2, 240, 0, W / 2, 240, 260);
-  glow.addColorStop(0, scoreColor + '22');
-  glow.addColorStop(1, 'transparent');
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, W, 500);
+  // large diffuse glow centred on ring
+  const bigGlow = ctx.createRadialGradient(cx, 310, 0, cx, 310, 340);
+  bigGlow.addColorStop(0, scoreColor + '30');
+  bigGlow.addColorStop(0.5, scoreColor + '12');
+  bigGlow.addColorStop(1, 'transparent');
+  ctx.fillStyle = bigGlow;
+  ctx.fillRect(0, 0, W, H);
 
-  // ---- Top teal accent bar ----
-  ctx.fillStyle = '#00B4C8';
-  roundRect(0, 0, W, 6, 0);
-  ctx.fill();
+  // faint grid lines (aesthetic noise)
+  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x <= W; x += 54) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y = 0; y <= H; y += 54) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
 
-  // ---- Brand header ----
-  ctx.font = 'bold 18px "Arial", sans-serif';
-  ctx.fillStyle = '#00B4C8';
+  // ─── ZONE 2 · top bar + brand ─────────────────────────────────────────────
+  // gradient top bar
+  const topBar = ctx.createLinearGradient(0,0,W,0);
+  topBar.addColorStop(0,'#00B4C8'); topBar.addColorStop(1, scoreColor);
+  ctx.fillStyle = topBar;
+  ctx.fillRect(0, 0, W, 5);
+
+  // brand
   ctx.textAlign = 'left';
-  ctx.fillText('phab', 36, 52);
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
-  ctx.font = '14px "Arial", sans-serif';
-  ctx.fillText('NutriIQ', 82, 52);
-
-  // ---- Tier pill ----
-  const tier = (data.tier_label || '').replace(/_/g, ' ').toUpperCase();
-  ctx.font = 'bold 11px "Arial", sans-serif';
-  const pillW = ctx.measureText(tier).width + 24;
-  roundRect(W - 36 - pillW, 36, pillW, 24, 12);
-  ctx.fillStyle = scoreColor + '33';
-  ctx.fill();
-  ctx.strokeStyle = scoreColor;
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.fillStyle = scoreColor;
-  ctx.textAlign = 'right';
-  ctx.fillText(tier, W - 36, 52);
-
-  // ---- Score ring ----
-  const cx = W / 2, cy = 230, radius = 110, lineW = 14;
-  // Track
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-  ctx.lineWidth = lineW;
-  ctx.stroke();
-  // Fill arc (score out of 100)
-  const startAngle = -Math.PI / 2;
-  const endAngle = startAngle + (score / 100) * Math.PI * 2;
-  const grad = ctx.createLinearGradient(cx - radius, cy, cx + radius, cy);
-  grad.addColorStop(0, '#00B4C8');
-  grad.addColorStop(1, scoreColor);
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius, startAngle, endAngle);
-  ctx.strokeStyle = grad;
-  ctx.lineWidth = lineW;
-  ctx.lineCap = 'round';
-  ctx.stroke();
-  // Score number
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 72px "Arial", sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(score, cx, cy + 24);
-  // "/100" label
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
-  ctx.font = '16px "Arial", sans-serif';
-  ctx.fillText('/ 100', cx, cy + 50);
-  // "NutriIQ" inside ring
+  ctx.font = 'bold 20px Arial';
+  ctx.fillStyle = '#00B4C8';
+  ctx.fillText('phab', 36, 58);
+  ctx.font = '15px Arial';
   ctx.fillStyle = 'rgba(255,255,255,0.35)';
-  ctx.font = '13px "Arial", sans-serif';
-  ctx.fillText('NutriIQ Score', cx, cy - 78);
+  ctx.fillText('NutriIQ', 93, 58);
 
-  // ---- Product name ----
-  const productName = data.product_name || 'Unknown Product';
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 26px "Arial", sans-serif';
+  // persona pill (top right)
+  const personaStr = persona.emoji + '  ' + persona.name;
+  ctx.font = 'bold 11px Arial';
+  const ppW = ctx.measureText(personaStr).width + 26;
+  rr(W - 36 - ppW, 38, ppW, 26, 13);
+  ctx.fillStyle = 'rgba(255,255,255,0.07)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.textAlign = 'right';
+  ctx.fillText(personaStr, W - 36, 56);
+
+  // ─── ZONE 3 · score ring ──────────────────────────────────────────────────
+  const ry = 260, rr2 = 118, lw = 13;
+  // outer glow ring
+  ctx.beginPath(); ctx.arc(cx, ry, rr2 + 10, 0, Math.PI*2);
+  ctx.strokeStyle = scoreColor + '18'; ctx.lineWidth = 20; ctx.stroke();
+  // track
+  ctx.beginPath(); ctx.arc(cx, ry, rr2, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = lw; ctx.stroke();
+  // fill
+  const ringGrad = ctx.createLinearGradient(cx-rr2,ry,cx+rr2,ry);
+  ringGrad.addColorStop(0,'#00B4C8'); ringGrad.addColorStop(1,scoreColor);
+  ctx.beginPath(); ctx.arc(cx, ry, rr2, -Math.PI/2, -Math.PI/2 + (score/100)*Math.PI*2);
+  ctx.strokeStyle = ringGrad; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.stroke();
+  // dot at start position
+  ctx.beginPath(); ctx.arc(cx, ry - rr2, 7, 0, Math.PI*2);
+  ctx.fillStyle = '#00B4C8'; ctx.fill();
+  // score number
   ctx.textAlign = 'center';
-  const maxNameWidth = W - 80;
-  if (ctx.measureText(productName).width > maxNameWidth) {
-    ctx.font = 'bold 20px "Arial", sans-serif';
+  ctx.font = 'bold 80px Arial';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(score, cx, ry + 28);
+  ctx.font = '14px Arial';
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.fillText('/ 100  NutriIQ', cx, ry + 54);
+
+  // ─── ZONE 4 · product name + grade pill ────────────────────────────────────
+  const pname = data.product_name || 'Unknown product';
+  ctx.font = 'bold 28px Arial';
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center';
+  if (ctx.measureText(pname).width > W - 80) ctx.font = 'bold 21px Arial';
+  wrapText(pname, cx, 418, W - 80, 34);
+
+  // grade pill centred
+  const gradeStr = data.score_grade || '';
+  if (gradeStr) {
+    ctx.font = 'bold 12px Arial';
+    const gW = ctx.measureText(gradeStr).width + 30;
+    rr(cx - gW/2, 450, gW, 27, 14);
+    ctx.fillStyle = scoreColor + '28'; ctx.fill();
+    ctx.strokeStyle = scoreColor + 'aa'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = scoreColor;
+    ctx.fillText(gradeStr, cx, 469);
   }
-  wrapText(productName, cx, 386, maxNameWidth, 30);
 
-  // ---- Divider ----
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(36, 430); ctx.lineTo(W - 36, 430);
-  ctx.stroke();
-
-  // ---- Key stats (3 cards in a row) ----
-  const stats = [
-    {
-      label: 'Protein Eff.',
-      value: data.protein_per_100kcal != null ? `${Number(data.protein_per_100kcal).toFixed(1)}g` : '—',
-      sub: 'per 100 kcal',
-      color: '#00B4C8'
-    },
-    {
-      label: 'Sugar',
-      value: data.per_100g && data.per_100g.sugar_g != null ? `${Number(data.per_100g.sugar_g).toFixed(1)}g` : '—',
-      sub: 'per 100g',
-      color: score >= 75 ? '#1db96a' : '#e8a030'
-    },
-    {
-      label: 'Additives',
-      value: data.has_artificial_additives ? 'YES' : 'NONE',
-      sub: 'artificial',
-      color: data.has_artificial_additives ? '#e84040' : '#1db96a'
-    }
+  // ─── ZONE 5 · macro stats row ──────────────────────────────────────────────
+  const statsY = 510;
+  const macros = [
+    { label: 'PROTEIN', value: data.protein_per_100kcal != null ? Number(data.protein_per_100kcal).toFixed(1)+'g' : '—', sub: '/100kcal', color: '#00B4C8' },
+    { label: 'SUGAR',   value: data.per_100g?.sugar_g != null ? Number(data.per_100g.sugar_g).toFixed(1)+'g' : '—', sub: '/100g', color: score >= 70 ? '#22C55E' : '#F59E0B' },
+    { label: 'CALORIES',value: data.per_100g?.calories != null ? Math.round(data.per_100g.calories)+'' : '—', sub: '/100g', color: '#b87fff' },
+    { label: 'ADDITIVES',value: data.has_artificial_additives ? 'YES' : 'NONE', sub: 'artificial', color: data.has_artificial_additives ? '#EF4444' : '#22C55E' },
   ];
-
-  const cardW = (W - 36 * 2 - 12 * 2) / 3;
-  const cardH = 100;
-  const cardY = 450;
-  stats.forEach((s, i) => {
-    const cardX = 36 + i * (cardW + 12);
-    roundRect(cardX, cardY, cardW, cardH, 12);
-    ctx.fillStyle = 'rgba(255,255,255,0.05)';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    // Value
-    ctx.fillStyle = s.color;
-    ctx.font = 'bold 22px "Arial", sans-serif';
+  const mW = (W - 48 - 12*3) / 4, mH = 90;
+  macros.forEach((m, i) => {
+    const mx = 24 + i*(mW+12);
+    rr(mx, statsY, mW, mH, 12);
+    ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.09)'; ctx.lineWidth = 1; ctx.stroke();
+    // coloured top sliver
+    rr(mx, statsY, mW, 3, 2);
+    ctx.fillStyle = m.color; ctx.fill();
+    // value
     ctx.textAlign = 'center';
-    ctx.fillText(s.value, cardX + cardW / 2, cardY + 38);
-    // Label
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 11px "Arial", sans-serif';
-    ctx.fillText(s.label, cardX + cardW / 2, cardY + 58);
-    // Sub
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.font = '10px "Arial", sans-serif';
-    ctx.fillText(s.sub, cardX + cardW / 2, cardY + 74);
+    let vfs = 20;
+    ctx.font = `bold ${vfs}px Arial`;
+    while (ctx.measureText(m.value).width > mW - 10 && vfs > 12) { vfs -= 2; ctx.font = `bold ${vfs}px Arial`; }
+    ctx.fillStyle = m.color;
+    ctx.fillText(m.value, mx+mW/2, statsY+36);
+    ctx.font = 'bold 9px Arial'; ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillText(m.label, mx+mW/2, statsY+52);
+    ctx.font = '9px Arial'; ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillText(m.sub, mx+mW/2, statsY+66);
   });
 
-  // ---- Score grade badge ----
-  if (data.score_grade) {
-    ctx.font = 'bold 13px "Arial", sans-serif';
-    ctx.textAlign = 'center';
-    const gradeText = `Grade: ${data.score_grade}`;
-    const gW = ctx.measureText(gradeText).width + 28;
-    roundRect(cx - gW / 2, 570, gW, 28, 14);
-    ctx.fillStyle = scoreColor + '22';
-    ctx.fill();
-    ctx.strokeStyle = scoreColor + '88';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.fillStyle = scoreColor;
-    ctx.fillText(gradeText, cx, 589);
-  }
+  // ─── ZONE 6 · percentile bar ───────────────────────────────────────────────
+  const pY = 628;
+  // label
+  ctx.textAlign = 'left';
+  ctx.font = '12px Arial'; ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.fillText('Better than', 36, pY);
+  ctx.font = 'bold 15px Arial'; ctx.fillStyle = '#00B4C8';
+  ctx.fillText(`${percentile}% of all scanned foods`, 36 + ctx.measureText('Better than ').width + 5, pY);
+  // track
+  rr(36, pY+10, W-72, 8, 4);
+  ctx.fillStyle = 'rgba(255,255,255,0.07)'; ctx.fill();
+  // fill
+  const pGrad = ctx.createLinearGradient(36, 0, 36 + (W-72)*(percentile/100), 0);
+  pGrad.addColorStop(0,'#EF4444'); pGrad.addColorStop(0.5,'#F59E0B'); pGrad.addColorStop(1,'#22C55E');
+  rr(36, pY+10, (W-72)*(percentile/100), 8, 4);
+  ctx.fillStyle = pGrad; ctx.fill();
+  // dot at end
+  const dotX = 36 + (W-72)*(percentile/100);
+  ctx.beginPath(); ctx.arc(dotX, pY+14, 6, 0, Math.PI*2);
+  ctx.fillStyle = '#fff'; ctx.fill();
 
-  // ---- Body impact text ----
-  if (data.body_impact) {
-    const impactY = data.score_grade ? 630 : 600;
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
-    ctx.font = '14px "Arial", sans-serif';
-    ctx.textAlign = 'center';
-    wrapText(data.body_impact, cx, impactY, W - 72, 22);
-  }
-
-  // ---- Bollywood punch banner (masala poster strip) ----
-  if (data._punch) {
-    ctx.save();
-    ctx.translate(cx, 795);
-    ctx.rotate(-0.035);
-    ctx.font = 'bold 24px "Arial", sans-serif';
-    ctx.textAlign = 'center';
-    const tw = Math.min(ctx.measureText(data._punch).width, W - 100);
-    const bw = tw + 48, bh = 52;
-    // orange drop shadow then black strip
-    ctx.fillStyle = 'rgba(255,91,31,0.9)';
-    ctx.fillRect(-bw / 2 + 5, -bh / 2 + 5, bw, bh);
-    ctx.fillStyle = '#111111';
-    ctx.fillRect(-bw / 2, -bh / 2, bw, bh);
+  // ─── ZONE 7 · punch line strip ─────────────────────────────────────────────
+  if (punch) {
+    const stripY = 672;
+    // full-width black strip with gradient borders
+    ctx.fillStyle = '#0D0D0D';
+    ctx.fillRect(0, stripY, W, 58);
+    // gradient top/bottom lines
+    const lineG = ctx.createLinearGradient(0,0,W,0);
+    lineG.addColorStop(0,'transparent'); lineG.addColorStop(0.3,'#FF5B1F'); lineG.addColorStop(0.7,'#FFD600'); lineG.addColorStop(1,'transparent');
+    ctx.fillStyle = lineG;
+    ctx.fillRect(0, stripY, W, 2);
+    ctx.fillRect(0, stripY+56, W, 2);
+    // stars + text
+    ctx.textAlign = 'center'; ctx.fillStyle = '#FF5B1F'; ctx.font = 'bold 12px Arial';
+    ctx.fillText('★', cx - 180, stripY + 35);
+    ctx.fillText('★', cx + 180, stripY + 35);
     ctx.fillStyle = '#FFD600';
-    // shrink font if line is long
-    let fs = 24;
-    while (fs > 14 && ctx.measureText(data._punch).width > bw - 32) { fs -= 2; ctx.font = `bold ${fs}px "Arial", sans-serif`; }
-    ctx.fillText(data._punch, 0, 8);
-    ctx.restore();
+    let pfs = 20;
+    ctx.font = `bold ${pfs}px Arial`;
+    while (ctx.measureText(punch).width > W - 130 && pfs > 13) { pfs -= 1; ctx.font = `bold ${pfs}px Arial`; }
+    ctx.fillText(punch, cx, stripY + 37);
   }
 
-  // ---- Bottom branding ----
-  // Teal bottom bar
-  ctx.fillStyle = '#00B4C8';
-  roundRect(0, H - 6, W, 6, 0);
-  ctx.fill();
+  // ─── ZONE 8 · body impact text ─────────────────────────────────────────────
+  if (data.body_impact) {
+    ctx.textAlign = 'center';
+    ctx.font = '13px Arial'; ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    wrapText(data.body_impact, cx, 758, W - 90, 20);
+  }
 
-  // Phab logo area
-  roundRect(36, H - 90, W - 72, 60, 12);
-  ctx.fillStyle = 'rgba(0,180,200,0.08)';
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(0,180,200,0.25)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  ctx.fillStyle = '#00B4C8';
-  ctx.font = 'bold 18px "Arial", sans-serif';
+  // ─── ZONE 9 · scan prompt CTA ──────────────────────────────────────────────
+  const ctaY = 850;
+  rr(36, ctaY, W-72, 52, 14);
+  const ctaGrad = ctx.createLinearGradient(36,ctaY,W-36,ctaY);
+  ctaGrad.addColorStop(0,'#00B4C8'); ctaGrad.addColorStop(1, scoreColor);
+  ctx.fillStyle = ctaGrad; ctx.fill();
   ctx.textAlign = 'center';
-  ctx.fillText('phab NutriIQ', cx, H - 60);
+  ctx.font = 'bold 15px Arial'; ctx.fillStyle = '#fff';
+  ctx.fillText('What does YOUR food score?', cx, ctaY + 22);
+  ctx.font = '12px Arial'; ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  ctx.fillText('phab-scan.vercel.app  →  free, instant, honest', cx, ctaY + 40);
 
-  ctx.fillStyle = 'rgba(255,255,255,0.35)';
-  ctx.font = '12px "Arial", sans-serif';
-  ctx.fillText('getphab.com · science-backed food intelligence', cx, H - 42);
+  // ─── ZONE 10 · bottom brand strip ──────────────────────────────────────────
+  ctx.fillStyle = 'rgba(0,180,200,0.08)';
+  ctx.fillRect(0, H-34, W, 34);
+  ctx.textAlign = 'center'; ctx.font = '11px Arial'; ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.fillText('phab NutriIQ · getphab.com · science-backed food intelligence', cx, H-14);
+  // gradient bottom bar
+  ctx.fillStyle = topBar;
+  ctx.fillRect(0, H-3, W, 3);
 }
 
 function shareCity(city, score) {
