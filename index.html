@@ -1821,8 +1821,8 @@ function showResults(data, city, notLabel) {
     wrap.innerHTML = `
       <div style="text-align:center; padding:2rem; background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); max-width:520px; margin:0 auto;">
         <div style="font-size:3rem; margin-bottom:1rem;">🤔</div>
-        <h3 style="margin-bottom:0.5rem;">This doesn't look like a nutrition label</h3>
-        <p style="color:var(--muted); font-size:14px;">Try photographing the back of a packet — the table with protein, carbs, fat values.</p>
+        <h3 style="margin-bottom:0.5rem;">That ain't food — nothing to analyse 🤷</h3>
+        <p style="color:var(--muted); font-size:14px;">We couldn't spot any food or drink in that photo. Point the camera at a nutrition label, a dish, or even an unlabeled snack — we'll take it from there.</p>
         <button class="try-again-btn" onclick="resetScan()">Try again</button>
       </div>`;
     return;
@@ -1846,6 +1846,14 @@ function showResults(data, city, notLabel) {
   const phabBetter = phabGap > 0;
 
   wrap.innerHTML = `
+    ${s.is_estimate ? `
+    <div style="max-width:520px; margin:0 auto 1rem; background:#fff8ec; border:1.5px solid #e8a030; border-radius:12px; padding:12px 16px; display:flex; gap:10px; align-items:flex-start;">
+      <span style="font-size:18px;">⚠️</span>
+      <div>
+        <div style="font-size:13px; font-weight:700; color:#b97a10;">Rough estimate — no label found</div>
+        <div style="font-size:13px; color:#8a6420; line-height:1.5;">${s.estimate_basis || 'Values estimated from the photo. Without a label or exact portion size, this score is approximate — treat it as a ballpark, not gospel.'}</div>
+      </div>
+    </div>` : ''}
     <div class="score-hero" style="--score-color:${strokeColor}">
       <div class="score-ring-wrap">
         <svg class="score-ring" viewBox="0 0 120 120">
