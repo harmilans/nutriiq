@@ -1648,9 +1648,21 @@ function showResults(data, city, notLabel) {
     </div>
 
     <div class="nutrient-grid">
-      ${nutriCard('Protein', p.protein_g + 'g', p.protein_g / 0.5, '#22C55E', 'per 100g · ' + s.protein_per_100kcal.toFixed(1) + 'g per 100kcal')}
-      ${nutriCard('Sugar', p.sugar_g + 'g', Math.min(p.sugar_g / 30 * 100, 100), p.sugar_g > 15 ? '#EF4444' : p.sugar_g > 5 ? '#F59E0B' : '#22C55E', 'per 100g · ' + (p.sugar_g > 15 ? 'high' : p.sugar_g > 5 ? 'moderate' : 'low'))}
-      ${nutriCard('Calories', p.calories + ' kcal', Math.min(p.calories / 6, 100), '#4eaaff', 'per 100g')}
+      ${(() => {
+        const srv = s.serving_size_g;
+        const perServingProtein = srv ? (p.protein_g * srv / 100).toFixed(1) + 'g per serving · ' : '';
+        return nutriCard('Protein', p.protein_g + 'g', p.protein_g / 0.5, '#22C55E', perServingProtein + 'per 100g · ' + s.protein_per_100kcal.toFixed(1) + 'g per 100kcal');
+      })()}
+      ${(() => {
+        const srv = s.serving_size_g;
+        const perServingSugar = srv ? (p.sugar_g * srv / 100).toFixed(1) + 'g per serving · ' : '';
+        return nutriCard('Sugar', p.sugar_g + 'g', Math.min(p.sugar_g / 30 * 100, 100), p.sugar_g > 15 ? '#EF4444' : p.sugar_g > 5 ? '#F59E0B' : '#22C55E', perServingSugar + 'per 100g · ' + (p.sugar_g > 15 ? 'high' : p.sugar_g > 5 ? 'moderate' : 'low'));
+      })()}
+      ${(() => {
+        const srv = s.serving_size_g;
+        const perServingCal = srv ? (p.calories * srv / 100).toFixed(0) + ' kcal per serving · ' : '';
+        return nutriCard('Calories', p.calories + ' kcal', Math.min(p.calories / 6, 100), '#4eaaff', perServingCal + 'per 100g');
+      })()}
       ${nutriCard('Fibre', p.fibre_g + 'g', p.fibre_g / 10 * 100, '#b87fff', 'per 100g · ' + (p.fibre_g >= 5 ? 'good' : p.fibre_g >= 2 ? 'moderate' : 'low'))}
     </div>
 
@@ -1659,7 +1671,15 @@ function showResults(data, city, notLabel) {
       <div class="verdict-row">${goodPills}${badPills}${neutralPills}</div>
     </div>
 
-    ${phabBetter ? `
+    ${(() => {
+      // Full Phab comparison only for protein-adjacent products; soft wink for everything else
+      const isProteinCategory = (s.protein_per_100kcal >= 4) ||
+        /protein|whey|bar|muesli|granola|oats|peanut butter|energy/i.test(s.product_name || '');
+      const buyUrl = 'https://www.getphab.com/collections/protein-bar';
+      const btn = (label) => `<a href="${buyUrl}" target="_blank" rel="noopener"
+        style="display:block; background:#fff; color:#00B4C8; font-weight:700; font-size:14px; text-align:center; padding:0.75rem 1rem; border-radius:8px; text-decoration:none; letter-spacing:0.02em;">${label}</a>`;
+
+      if (isProteinCategory && phabBetter) return `
     <div class="phab-cta">
       <div class="phab-cta-head">Phab NutriIQ — 82/100</div>
       <h3>This food scores ${phabGap} points lower than a Phab bar</h3>
@@ -1673,26 +1693,34 @@ function showResults(data, city, notLabel) {
         <div class="compare-vs">vs</div>
         <div class="compare-col phab-col">
           <div class="compare-col-label">✦ Phab bar</div>
-          <div class="compare-col-val">17.5g</div>
+          <div class="compare-col-val">5.9g</div>
           <div class="compare-col-sub">protein / 100kcal</div>
           <div class="compare-col-sub">0g added sugar</div>
         </div>
       </div>
       <div style="font-size:13px; color:rgba(255,255,255,0.75); margin-bottom:1rem;">Same snack occasion. <span class="phab-score-boost">+${phabGap} NutriIQ</span> smarter choice.</div>
-      <a href="https://www.getphab.com/collections/protein-bar" target="_blank" rel="noopener"
-        style="display:block; background:#fff; color:#00B4C8; font-weight:700; font-size:14px; text-align:center; padding:0.75rem 1rem; border-radius:8px; text-decoration:none; letter-spacing:0.02em;">
-        Try a Phab bar →
-      </a>
-    </div>` : `
+      ${btn('Try a Phab bar →')}
+    </div>`;
+
+      if (isProteinCategory) return `
     <div class="phab-cta">
       <div class="phab-cta-head">Phab NutriIQ — 82/100</div>
       <h3>You're already eating smart 🎯</h3>
       <div style="font-size:13px; color:rgba(255,255,255,0.75); margin-bottom:1rem;">This food scores ${Math.abs(phabGap)} points ${phabGap < 0 ? 'higher than' : 'equal to'} a Phab bar. Keep it up.</div>
-      <a href="https://www.getphab.com/collections/protein-bar" target="_blank" rel="noopener"
-        style="display:block; background:#fff; color:#00B4C8; font-weight:700; font-size:14px; text-align:center; padding:0.75rem 1rem; border-radius:8px; text-decoration:none; letter-spacing:0.02em;">
-        Shop Phab bars →
-      </a>
-    </div>`}
+      ${btn('Shop Phab bars →')}
+    </div>`;
+
+      let line;
+      if (score >= 75) line = `Solid choice — ${score}/100 is genuinely good. (Phab clocks 82 on this same index, just saying 👀)`;
+      else if (score >= 50) line = `${score}/100 — decent, but there's room to do better. Fun fact: Phab scores 82 on its own index. We checked. Twice.`;
+      else line = `${score}/100… this one isn't doing your body any favours. There happens to be an 82/100 option we may be <em>slightly</em> biased about.`;
+      return `
+    <div class="phab-cta">
+      <div class="phab-cta-head">built by phab · 82/100 on its own index</div>
+      <div style="font-size:14px; color:rgba(255,255,255,0.85); line-height:1.55; margin:0.5rem 0 1rem;">${line}</div>
+      ${btn('Care to grab a Phab? →')}
+    </div>`;
+    })()}
 
     <div style="margin-bottom:1rem;">
       <div style="font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.6rem;">Share your score</div>
@@ -1754,27 +1782,27 @@ const LB_META = {
     }
   },
   protein: {
-    desc: '💪 <strong>Protein Score</strong> — average grams of protein per 100 kcal across all scanned products. Measures how protein-efficient the city\'s food choices are. Phab bar = 17.5g / 100 kcal.',
-    phabScore: 17.5,
-    phabLabel: 'Phab bar benchmark: 17.5g protein / 100 kcal',
+    desc: '💪 <strong>Protein Score</strong> — average grams of protein per 100 kcal across all scanned products. Measures how protein-efficient the city\'s food choices are. Phab bar = 5.9g / 100 kcal.',
+    phabScore: 5.9,
+    phabLabel: 'Phab bar benchmark: 5.9g protein / 100 kcal',
     phabSub: 'Above this = eating as protein-efficiently as a Phab bar.',
     unit: 'g/100kcal',
-    gradeLabel: score => score >= 15 ? '🟢 High protein' : score >= 8 ? '🟡 Moderate' : '🔴 Low protein',
+    gradeLabel: score => score >= 5 ? '🟢 High protein' : score >= 3 ? '🟡 Moderate' : '🔴 Low protein',
     vsPhabText: (score) => {
-      const diff = Math.abs(score - 17.5).toFixed(1);
-      return score >= 17.5 ? `+${diff}g above Phab 🏆` : `-${diff}g below Phab`;
+      const diff = Math.abs(score - 5.9).toFixed(2);
+      return score >= 5.9 ? `+${diff}g above Phab 🏆` : `-${diff}g below Phab`;
     }
   },
   sugar: {
-    desc: '🩸 <strong>Sugar Avoidance</strong> — how well each city avoids added sugar. Score = 100 minus average sugar per 100g. Phab bar has 0g added sugar, scoring a perfect 100.',
-    phabScore: 100,
-    phabLabel: 'Phab bar benchmark: 0g sugar → Score 100',
-    phabSub: 'Phab has zero added sugar — the gold standard.',
+    desc: '🩸 <strong>Sugar Avoidance</strong> — score = 100 minus average total sugar per 100g. Lower sugar = higher score. Phab bar has 8.48g total sugar per 100g (0g added sugars), scoring 91.52.',
+    phabScore: 91.52,
+    phabLabel: 'Phab bar benchmark: 8.48g total sugar → Score 91.52',
+    phabSub: 'Zero added sugar, natural sugars only — very low glycaemic impact.',
     unit: '',
     gradeLabel: score => score >= 85 ? '🟢 Sugar smart' : score >= 65 ? '🟡 Moderate' : '🔴 High sugar',
     vsPhabText: (score) => {
-      const diff = Math.abs(score - 100).toFixed(2);
-      return score >= 100 ? `Matches Phab 🏆` : `-${diff} pts vs Phab`;
+      const diff = Math.abs(score - 91.52).toFixed(2);
+      return score >= 91.52 ? `+${diff} above Phab 🏆` : `-${diff} pts vs Phab`;
     }
   }
 };
