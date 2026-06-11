@@ -1121,6 +1121,15 @@
     <input type="hidden" id="city-value" value="">
   </div>
 
+  <!-- Mode toggle: single scan vs compare -->
+  <div style="max-width:520px; margin:0 auto 1rem; padding:0 1rem;">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0; background:var(--surface); border:1.5px solid var(--border); border-radius:12px; overflow:hidden;">
+      <button id="mode-single-btn" onclick="setScanMode('single')" style="padding:12px; border:none; cursor:pointer; font-family:inherit; font-size:14px; font-weight:700; background:var(--phab); color:#fff;">📸 Single Scan</button>
+      <button id="mode-compare-btn" onclick="setScanMode('compare')" style="padding:12px; border:none; cursor:pointer; font-family:inherit; font-size:14px; font-weight:700; background:transparent; color:var(--muted);">⚖️ Compare</button>
+    </div>
+  </div>
+
+  <div id="single-scan-section">
   <div style="max-width:520px; margin:0 auto; padding:0 1rem;">
     <div class="upload-zone" id="upload-zone">
       <input type="file" id="file-input" accept="image/*">
@@ -1159,6 +1168,19 @@
     <input type="text" id="product-name-input"
       placeholder="e.g. Lay's Classic Salted, Britannia NutriChoice..."
       style="width:100%; box-sizing:border-box; padding:12px 14px; border:1.5px solid var(--phab); border-radius:10px; font-size:14px; font-family:inherit; background:var(--surface); color:var(--text); outline:none;">
+
+    <!-- Optional front-of-pack shot → claims-vs-reality audit -->
+    <div style="margin-top:0.75rem;">
+      <label for="front-file-input" id="front-add-label" style="display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:var(--phab); cursor:pointer; text-decoration:underline;">
+        ＋ Add front of pack <span style="font-weight:400; color:var(--muted); text-decoration:none;">(optional — we'll fact-check the marketing claims)</span>
+      </label>
+      <input type="file" id="front-file-input" accept="image/*" style="display:none;" onchange="handleFrontFile(this.files[0])">
+      <div id="front-preview" style="display:none; margin-top:8px; align-items:center; gap:10px;">
+        <img id="front-preview-img" src="" alt="Front of pack" style="width:64px; height:64px; object-fit:cover; border-radius:8px; border:1.5px solid var(--phab);">
+        <span style="font-size:13px; color:var(--text);">Front photo added ✓</span>
+        <button onclick="clearFrontFile()" style="font-size:12px; color:#e85050; background:none; border:none; cursor:pointer; text-decoration:underline;">Remove</button>
+      </div>
+    </div>
   </div>
 
   <div style="text-align:center; padding:0 1rem 1rem;">
@@ -1187,6 +1209,21 @@
       <summary style="font-size:13px; font-weight:600; cursor:pointer; color:var(--muted); margin-bottom:0.5rem;">🔍 Debug: Raw API response</summary>
       <pre style="background:#1a1a2e; color:#a0e0ff; font-size:11px; padding:1rem; border-radius:8px; overflow-x:auto; white-space:pre-wrap; word-break:break-all;"></pre>
     </details>
+  </div>
+  </div><!-- /single-scan-section -->
+
+  <!-- COMPARE MODE -->
+  <div id="compare-section" style="display:none; max-width:520px; margin:0 auto; padding:0 1rem;">
+    <p style="font-size:14px; color:var(--muted); text-align:center; margin-bottom:1rem;">Standing in the aisle with two options? Snap both labels and we'll pick the winner.</p>
+    <div id="compare-slots" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:1rem;">
+      <!-- slots injected by JS -->
+    </div>
+    <button class="btn-analyze" id="compare-btn" onclick="runCompare()" disabled style="width:100%;">⚖️ Compare products →</button>
+    <div class="loading-state" id="compare-loading" style="margin-top:1rem;">
+      <div class="loading-spinner"></div>
+      <div style="text-align:center; font-size:14px; color:var(--muted);" id="compare-loading-text">Analysing products…</div>
+    </div>
+    <div id="compare-results" style="margin-top:1.5rem;"></div>
   </div>
 </div>
 
@@ -1325,8 +1362,33 @@
 // ===================== STATE =====================
 let uploadedImageBase64 = null;
 let uploadedImageType = null;
+let frontImageBase64 = null;
 let currentResults = null;
 let lbMode = 'overall';
+let compareSlots = [null, null, null]; // {base64, preview, name}
+
+// Resize + compress any image file to max 1200px JPEG 80%, callback(base64, dataUrl)
+function compressFile(file, cb) {
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const imgEl = new Image();
+    imgEl.onload = function() {
+      const MAX = 1200;
+      let w = imgEl.width, h = imgEl.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else       { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(imgEl, 0, 0, w, h);
+      const dataUrl = c.toDataURL('image/jpeg', 0.80);
+      cb(dataUrl.split(',')[1], dataUrl);
+    };
+    imgEl.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
 
 
 // ===================== PAGE ROUTING =====================
@@ -1515,6 +1577,161 @@ function handleFile(file) {
   reader.readAsDataURL(file);
 }
 
+// ===================== FRONT-OF-PACK (claims audit) =====================
+function handleFrontFile(file) {
+  if (!file) return;
+  compressFile(file, (b64, dataUrl) => {
+    frontImageBase64 = b64;
+    document.getElementById('front-preview-img').src = dataUrl;
+    document.getElementById('front-preview').style.display = 'flex';
+    document.getElementById('front-add-label').style.display = 'none';
+  });
+}
+function clearFrontFile() {
+  frontImageBase64 = null;
+  document.getElementById('front-file-input').value = '';
+  document.getElementById('front-preview').style.display = 'none';
+  document.getElementById('front-add-label').style.display = 'inline-flex';
+}
+
+// ===================== SCAN MODE TOGGLE =====================
+function setScanMode(mode) {
+  const single = mode === 'single';
+  document.getElementById('single-scan-section').style.display = single ? 'block' : 'none';
+  document.getElementById('compare-section').style.display = single ? 'none' : 'block';
+  const sb = document.getElementById('mode-single-btn'), cb = document.getElementById('mode-compare-btn');
+  sb.style.background = single ? 'var(--phab)' : 'transparent';
+  sb.style.color = single ? '#fff' : 'var(--muted)';
+  cb.style.background = single ? 'transparent' : 'var(--phab)';
+  cb.style.color = single ? 'var(--muted)' : '#fff';
+  if (!single) renderCompareSlots();
+}
+
+// ===================== COMPARE MODE =====================
+function renderCompareSlots() {
+  const wrap = document.getElementById('compare-slots');
+  wrap.innerHTML = compareSlots.map((slot, i) => {
+    const required = i < 2;
+    if (slot) {
+      return `<div style="position:relative; border:2px solid var(--phab); border-radius:12px; overflow:hidden; aspect-ratio:3/4; background:var(--surface);">
+        <img src="${slot.preview}" style="width:100%; height:100%; object-fit:cover;">
+        <button onclick="clearCompareSlot(${i})" style="position:absolute; top:6px; right:6px; width:24px; height:24px; border-radius:50%; border:none; background:rgba(0,0,0,0.6); color:#fff; cursor:pointer; font-size:12px;">✕</button>
+        <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6); color:#fff; font-size:11px; padding:4px 6px; text-align:center;">${String.fromCharCode(65+i)}</div>
+      </div>`;
+    }
+    return `<label style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; border:2px dashed ${required ? 'var(--phab)' : 'var(--border)'}; border-radius:12px; aspect-ratio:3/4; cursor:pointer; background:var(--surface); color:var(--muted); font-size:12px; text-align:center; padding:6px;">
+      <span style="font-size:22px;">📷</span>
+      <span>Product ${String.fromCharCode(65+i)}${required ? '' : '<br>(optional)'}</span>
+      <input type="file" accept="image/*" style="display:none;" onchange="handleCompareFile(${i}, this.files[0])">
+    </label>`;
+  }).join('');
+  document.getElementById('compare-btn').disabled = !(compareSlots[0] && compareSlots[1]);
+}
+
+function handleCompareFile(i, file) {
+  if (!file) return;
+  compressFile(file, (b64, dataUrl) => {
+    compareSlots[i] = { base64: b64, preview: dataUrl };
+    renderCompareSlots();
+  });
+}
+
+function clearCompareSlot(i) {
+  compareSlots[i] = null;
+  renderCompareSlots();
+}
+
+async function runCompare() {
+  const filled = compareSlots.map((s, i) => s ? { ...s, idx: i } : null).filter(Boolean);
+  if (filled.length < 2) return;
+
+  const city = document.getElementById('city-value').value.trim() || null;
+  document.getElementById('compare-btn').disabled = true;
+  document.getElementById('compare-results').innerHTML = '';
+  document.getElementById('compare-loading').classList.add('active');
+
+  const results = [];
+  try {
+    for (let n = 0; n < filled.length; n++) {
+      document.getElementById('compare-loading-text').textContent = `Analysing product ${String.fromCharCode(65 + filled[n].idx)} (${n+1}/${filled.length})…`;
+      const resp = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: filled[n].base64, imageType: 'image/jpeg', city })
+      });
+      const data = await resp.json();
+      if (!resp.ok || data.error) throw new Error(data.error || 'Analysis failed');
+      if (data.not_a_food_label) throw new Error(`Product ${String.fromCharCode(65 + filled[n].idx)}: that photo doesn't look like a food label.`);
+      results.push({ ...data, _slot: String.fromCharCode(65 + filled[n].idx) });
+    }
+    renderCompareResults(results);
+    updateScanCount();
+  } catch (err) {
+    showToast('⚠️ ' + (err.message || 'Compare failed. Try clearer photos.'));
+  } finally {
+    document.getElementById('compare-loading').classList.remove('active');
+    document.getElementById('compare-btn').disabled = false;
+  }
+}
+
+function renderCompareResults(results) {
+  const isProteinComparison = results.some(r =>
+    (r.protein_per_100kcal >= 4) || /protein|whey|bar|muesli|granola|oats|peanut butter|energy/i.test(r.product_name || ''));
+
+  const sorted = [...results].sort((a, b) => (b.nutri_iq_score ?? 0) - (a.nutri_iq_score ?? 0));
+  const winner = sorted[0];
+
+  // Phab joins the table only when products are protein-adjacent
+  const cols = [...results];
+  if (isProteinComparison) {
+    cols.push({ _slot: 'PHAB', product_name: 'Phab bar', nutri_iq_score: 82, protein_per_100kcal: 5.9,
+      per_100g: { sugar_g: 8.48, fibre_g: 2.53, calories: 423 }, added_sugar_g: 0, sugar_source: 'natural_fruit', has_artificial_additives: false, _isPhab: true });
+  }
+
+  const srcLabel = s => ({ refined: '🟥 refined', syrup: '🟧 syrup', natural_fruit: '🟩 fruit/dates', dairy: '🟦 dairy', mixed: '🟨 mixed', unknown: '—' }[s] || '—');
+  const row = (label, fn) => `<tr><td style="padding:8px 10px; font-size:12px; color:var(--muted); white-space:nowrap;">${label}</td>${cols.map(c =>
+    `<td style="padding:8px 10px; font-size:13px; font-weight:600; text-align:center; ${c._isPhab ? 'background:rgba(0,180,200,0.08);' : ''}">${fn(c)}</td>`).join('')}</tr>`;
+
+  const html = `
+    <div style="background:var(--surface); border:1.5px solid var(--phab); border-radius:14px; padding:1.25rem; margin-bottom:1rem;">
+      <div style="font-size:12px; font-weight:700; color:var(--phab); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:4px;">⚖️ Verdict</div>
+      <div style="font-size:18px; font-weight:800; color:var(--text); margin-bottom:6px;">Winner: Product ${winner._slot} — ${winner.product_name}</div>
+      <div style="font-size:13px; color:var(--muted); line-height:1.5;">${winner.nutri_iq_score}/100 NutriIQ${sorted[1] ? ` vs ${sorted[1].nutri_iq_score}/100 for Product ${sorted[1]._slot}` : ''}. ${winner.verdicts?.good?.[0] || ''}</div>
+    </div>
+
+    <div style="overflow-x:auto; background:var(--surface); border:1.5px solid var(--border); border-radius:14px;">
+      <table style="width:100%; border-collapse:collapse;">
+        <thead><tr>
+          <th></th>
+          ${cols.map(c => `<th style="padding:10px; font-size:12px; ${c._isPhab ? 'background:rgba(0,180,200,0.12); color:var(--phab);' : 'color:var(--text);'}">${c._isPhab ? '✦ Phab' : 'Product ' + c._slot}<br><span style="font-weight:400; color:var(--muted); font-size:10px;">${(c.product_name||'').slice(0,20)}</span></th>`).join('')}
+        </tr></thead>
+        <tbody>
+          ${row('NutriIQ score', c => `<span style="color:${(c.nutri_iq_score??0) >= 70 ? '#1db96a' : (c.nutri_iq_score??0) >= 45 ? '#e8a030' : '#e85050'}">${c.nutri_iq_score ?? '—'}</span>`)}
+          ${row('Protein /100kcal', c => (c.protein_per_100kcal != null ? c.protein_per_100kcal.toFixed(1) + 'g' : '—'))}
+          ${row('Sugar /100g', c => (c.per_100g?.sugar_g != null ? c.per_100g.sugar_g.toFixed(1) + 'g' : '—'))}
+          ${row('Sugar source', c => srcLabel(c.sugar_source))}
+          ${row('Fibre /100g', c => (c.per_100g?.fibre_g != null ? c.per_100g.fibre_g.toFixed(1) + 'g' : '—'))}
+          ${row('Additives', c => c.has_artificial_additives ? '⚠️ yes' : '✓ clean')}
+        </tbody>
+      </table>
+    </div>
+
+    ${isProteinComparison ? `
+    <div class="phab-cta" style="margin-top:1rem;">
+      <div class="phab-cta-head">Phab NutriIQ — 82/100</div>
+      <div style="font-size:14px; color:rgba(255,255,255,0.85); line-height:1.55; margin:0.5rem 0 1rem;">You're comparing protein products — so we invited ourselves to the table. ${winner.nutri_iq_score >= 82 ? 'And honestly, Product ' + winner._slot + ' holds its own. Respect.' : 'Phab outscores both. Just the data talking.'}</div>
+      <a href="https://www.getphab.com/collections/protein-bar" target="_blank" rel="noopener" style="display:block; background:#fff; color:#00B4C8; font-weight:700; font-size:14px; text-align:center; padding:0.75rem 1rem; border-radius:8px; text-decoration:none;">Care to grab a Phab? →</a>
+    </div>` : `
+    <div class="phab-cta" style="margin-top:1rem;">
+      <div class="phab-cta-head">built by phab · 82/100 on its own index</div>
+      <div style="font-size:14px; color:rgba(255,255,255,0.85); line-height:1.55; margin:0.5rem 0 1rem;">Go with Product ${winner._slot} — solid call. (Phab clocks 82 on this same index, just saying 👀)</div>
+      <a href="https://www.getphab.com/collections/protein-bar" target="_blank" rel="noopener" style="display:block; background:#fff; color:#00B4C8; font-weight:700; font-size:14px; text-align:center; padding:0.75rem 1rem; border-radius:8px; text-decoration:none;">Care to grab a Phab? →</a>
+    </div>`}
+  `;
+  document.getElementById('compare-results').innerHTML = html;
+  document.getElementById('compare-results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 // ===================== ANALYSIS =====================
 async function analyzeImage() {
   if (!uploadedImageBase64) return;
@@ -1548,7 +1765,9 @@ async function analyzeImage() {
         imageBase64: uploadedImageBase64,
         imageType: uploadedImageType,
         city: city,
-        productName: document.getElementById('product-name-input').value.trim() || null
+        productName: document.getElementById('product-name-input').value.trim() || null,
+        frontImageBase64: frontImageBase64,
+        frontImageType: frontImageBase64 ? 'image/jpeg' : null
       })
     });
 
@@ -1656,7 +1875,10 @@ function showResults(data, city, notLabel) {
       ${(() => {
         const srv = s.serving_size_g;
         const perServingSugar = srv ? (p.sugar_g * srv / 100).toFixed(1) + 'g per serving · ' : '';
-        return nutriCard('Sugar', p.sugar_g + 'g', Math.min(p.sugar_g / 30 * 100, 100), p.sugar_g > 15 ? '#EF4444' : p.sugar_g > 5 ? '#F59E0B' : '#22C55E', perServingSugar + 'per 100g · ' + (p.sugar_g > 15 ? 'high' : p.sugar_g > 5 ? 'moderate' : 'low'));
+        const srcMap = { refined: 'refined sugar', syrup: 'syrup-based', natural_fruit: 'from fruit/dates 🌿', dairy: 'from dairy', mixed: 'mixed sources' };
+        const srcNote = srcMap[s.sugar_source] ? ' · ' + srcMap[s.sugar_source] : '';
+        const naturalish = s.sugar_source === 'natural_fruit' || s.sugar_source === 'dairy';
+        return nutriCard('Sugar', p.sugar_g + 'g', Math.min(p.sugar_g / 30 * 100, 100), (p.sugar_g > 15 && !naturalish) ? '#EF4444' : (p.sugar_g > 5 && !naturalish) ? '#F59E0B' : '#22C55E', perServingSugar + 'per 100g · ' + (p.sugar_g > 15 ? 'high' : p.sugar_g > 5 ? 'moderate' : 'low') + srcNote);
       })()}
       ${(() => {
         const srv = s.serving_size_g;
@@ -1670,6 +1892,13 @@ function showResults(data, city, notLabel) {
       <div class="breakdown-title"><span class="icon">🔬</span> Verdict</div>
       <div class="verdict-row">${goodPills}${badPills}${neutralPills}</div>
     </div>
+
+    ${s.claims_audit && s.claims_audit.verdict ? `
+    <div class="breakdown-card" style="border:1.5px solid #e8a030;">
+      <div class="breakdown-title"><span class="icon">🕵️</span> Claims vs Reality</div>
+      ${(s.claims_audit.claims || []).map(c => `<div style="font-size:13px; color:var(--muted); margin-bottom:4px;">📢 "${c}"</div>`).join('')}
+      <div style="font-size:14px; color:var(--text); font-weight:600; margin-top:8px; line-height:1.5;">${s.claims_audit.verdict}</div>
+    </div>` : ''}
 
     ${(() => {
       // Full Phab comparison only for protein-adjacent products; soft wink for everything else
