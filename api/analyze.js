@@ -41,7 +41,11 @@ Always return valid JSON only — no markdown, no backticks, no preamble.`;
 IMPORTANT: The label may be rotated, sideways, upside-down, or at an angle — rotate it mentally and read it anyway. Do not refuse due to orientation.
 ${safeProductName ? `The user has identified this product as: "${safeProductName}". Use this as the product_name and as context when reading the label.` : ''}
 If the label is partially visible, estimate missing values from what is visible.
-Only set "not_a_food_label": true if the image contains NO food packaging whatsoever.
+
+THREE CASES — decide which one applies:
+1. Nutrition label visible (even partial): analyse normally. Set "is_estimate": false.
+2. NO label, but the image clearly shows FOOD or a DRINK (a dish, a snack, a cocktail, a juice, restaurant food, fruit, etc.): identify the food, estimate the visible portion size, and estimate typical nutrition values for that food and portion from your knowledge. Set "is_estimate": true and fill "estimate_basis" with a short note (e.g. "Estimated for ~300ml whiskey sour cocktail — no label or exact portion available"). Score it normally but slightly conservatively.
+3. NOT food at all (a car, a person, a desk, scenery): set "not_a_food_label": true. Do not invent values.
 
 NOTE on per_100g: ALL numeric values must be normalised to per-100g basis regardless of serving size printed on label.
 Also extract the actual serving size (e.g. 40g) and per-serving protein so the UI can show both.
@@ -95,7 +99,9 @@ Required shape:
     "phab_sugar_per_100g": 8.48,
     "nutri_iq_gap": number
   },
-  "not_a_food_label": boolean
+  "is_estimate": boolean (true when values are estimated from a photo of unlabeled food),
+  "estimate_basis": "string or null — what the estimate assumed (food identified + portion)",
+  "not_a_food_label": boolean (ONLY when the image contains no food or drink at all)
 }`;
 
   try {
