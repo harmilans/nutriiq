@@ -428,6 +428,30 @@
   @media (prefers-reduced-motion: reduce) {
     .results-wrap.active > * { animation: none; }
     .img-preview.scanning::after, .img-preview.scanning::before { animation: none; display: none; }
+    .punch-banner { animation: none; }
+  }
+
+  /* Bollywood punch-line banner — masala poster style */
+  .punch-banner {
+    display: inline-block;
+    background: #111;
+    color: #FFD600;
+    font-weight: 900;
+    font-size: clamp(16px, 4.5vw, 22px);
+    line-height: 1.3;
+    padding: 0.55rem 1.2rem;
+    border-radius: 4px;
+    transform: rotate(-2deg);
+    box-shadow: 4px 4px 0 rgba(255,91,31,0.85);
+    letter-spacing: 0.01em;
+    margin: 0.9rem auto 0.3rem;
+    max-width: 92%;
+    animation: punchIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 1.15s both;
+  }
+  @keyframes punchIn {
+    0%   { opacity: 0; transform: rotate(-2deg) scale(2.2); }
+    60%  { opacity: 1; transform: rotate(-2deg) scale(0.92); }
+    100% { opacity: 1; transform: rotate(-2deg) scale(1); }
   }
   .img-preview.active { display: block; }
   .img-preview img {
@@ -1171,6 +1195,12 @@
       <button id="mode-single-btn" onclick="setScanMode('single')" style="padding:12px; border:none; cursor:pointer; font-family:inherit; font-size:14px; font-weight:700; background:var(--phab); color:#fff;">📸 Single Scan</button>
       <button id="mode-compare-btn" onclick="setScanMode('compare')" style="padding:12px; border:none; cursor:pointer; font-family:inherit; font-size:14px; font-weight:700; background:transparent; color:var(--muted);">⚖️ Compare</button>
     </div>
+    <!-- Language toggle -->
+    <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-top:0.6rem; font-size:12px; color:var(--muted);">
+      <span>🗣</span>
+      <button id="lang-en-btn" onclick="setLang('en')" style="border:none; background:none; cursor:pointer; font-family:inherit; font-size:12px; padding:3px 10px; border-radius:20px;">English</button>
+      <button id="lang-hi-btn" onclick="setLang('hinglish')" style="border:none; background:none; cursor:pointer; font-family:inherit; font-size:12px; padding:3px 10px; border-radius:20px;">Hinglish</button>
+    </div>
   </div>
 
   <div id="single-scan-section">
@@ -1404,6 +1434,59 @@
 </div>
 
 <script>
+// ===================== PHAB BENCHMARK =====================
+// PROVISIONAL: estimated from Phab macros, not yet measured by the engine.
+// To verify: scan a real Phab bar label 3-5 times via this tool, take the median,
+// and update these three constants (also update the values in api/analyze.js prompt).
+const PHAB_SCORE = 82;            // NutriIQ /100
+const PHAB_PROTEIN_100KCAL = 5.9; // g protein per 100 kcal
+const PHAB_SUGAR_100G = 8.48;     // g total sugar per 100g (0g added)
+
+// ===================== LANGUAGE =====================
+let appLang = localStorage.getItem('nutriiq_lang') || null; // 'en' | 'hinglish' | null (not chosen yet)
+
+function setLang(lang, save = true) {
+  appLang = lang;
+  if (save) localStorage.setItem('nutriiq_lang', lang);
+  const en = document.getElementById('lang-en-btn'), hi = document.getElementById('lang-hi-btn');
+  if (!en || !hi) return;
+  const on  = 'border:none;background:var(--phab);color:#fff;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;';
+  const off = 'border:none;background:none;color:var(--muted);cursor:pointer;font-family:inherit;font-size:12px;padding:3px 10px;border-radius:20px;';
+  en.style.cssText = lang === 'en' ? on : off;
+  hi.style.cssText = lang === 'hinglish' ? on : off;
+}
+
+// Default Hinglish for Indian cities if the user never chose a language
+const INDIAN_CITY_RX = /mumbai|delhi|gurgaon|gurugram|noida|bangalore|bengaluru|hyderabad|chennai|kolkata|pune|ahmedabad|jaipur|lucknow|chandigarh|indore|kochi|goa/i;
+function maybeDefaultLangFromCity(city) {
+  if (localStorage.getItem('nutriiq_lang')) return; // user already chose
+  setLang(INDIAN_CITY_RX.test(city || '') ? 'hinglish' : 'en', false);
+}
+
+// ===================== BOLLYWOOD PUNCH LINES =====================
+const PUNCH_LINES = {
+  hinglish: {
+    great:  ['Ekdum jhakaas! 🔥', 'Body bole: thank you, boss 🙏', 'Yeh hui na baat! 💪', 'Picture perfect khana, bhai 🎬', 'All izz well — seriously well 👌'],
+    good:   ['Solid hai boss, chalega 👌', 'Thoda aur push karo, hero banoge 💪', 'Accha hai, par blockbuster nahi 🎥', 'Decent picture, sequel better banao 🍿'],
+    mid:    ['Kya thakela khana kha raha hai bhai? 😬', 'Thoda adjust karo, picture abhi baaki hai 🎬', 'Yeh khana half-ticket hai, full nahi 🎫', 'Interval ke baad sudhar ja, bhai 🍿'],
+    bad:    ['Bhai, yeh khana hai ya time bomb? 💣', 'Rishtey mein toh yeh cheeni ka baap hai 🍬', 'Yeh toh flop show hai, boss 📉', 'Pet ka villain mil gaya 😈'],
+    awful:  ['Yeh toh crime scene hai 🚨', 'Mogambo khush hua… tumhara doctor nahi 😅', 'Bhaag yahan se, abhi! 🏃', 'Yeh khana nahi, dhokha hai 💔']
+  },
+  en: {
+    great:  ['Absolute blockbuster! 🔥', 'Your body just gave a standing ovation 👏', 'Chef’s kiss nutrition 💋', 'Peak fuel. No notes. 💪'],
+    good:   ['Solid pick — almost a hit 👌', 'Good, not great. Sequel needed 🎥', 'Respectable. Your gut approves 👍'],
+    mid:    ['Why are you eating tired food? 😬', 'This snack is running on 2G ⏳', 'Half-decent at best, friend 🎫'],
+    bad:    ['Is this food or a time bomb? 💣', 'Your pancreas just filed a complaint 📋', 'This is a flop show 📉'],
+    awful:  ['This is a crime scene 🚨', 'Run. Just run. 🏃', 'That’s not food, that’s betrayal 💔']
+  }
+};
+
+function pickPunchLine(score) {
+  const band = score >= 85 ? 'great' : score >= 70 ? 'good' : score >= 50 ? 'mid' : score >= 30 ? 'bad' : 'awful';
+  const pool = PUNCH_LINES[appLang === 'hinglish' ? 'hinglish' : 'en'][band];
+  return pool[(Math.random() * pool.length) | 0];
+}
+
 // ===================== STATE =====================
 let uploadedImageBase64 = null;
 let uploadedImageType = null;
@@ -1758,7 +1841,7 @@ async function runCompare() {
       const s = filled[n];
       const label = String.fromCharCode(65 + s.idx);
       document.getElementById('compare-loading-text').textContent = `Analysing product ${label} (${n+1}/${filled.length})…`;
-      const body = { imageBase64: s.back.base64, imageType: 'image/jpeg', city, skipPersist: true };
+      const body = { imageBase64: s.back.base64, imageType: 'image/jpeg', city, skipPersist: true, lang: appLang || 'en' };
       if (s.front) { body.frontImageBase64 = s.front.base64; body.frontImageType = 'image/jpeg'; }
       if (s.name && s.name.trim()) body.productName = s.name.trim();
       const resp = await fetch('/api/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -1787,8 +1870,8 @@ function renderCompareResults(results) {
   // Phab joins the table only when products are protein-adjacent
   const cols = [...results];
   if (isProteinComparison) {
-    cols.push({ _slot: 'PHAB', product_name: 'Phab bar', nutri_iq_score: 82, protein_per_100kcal: 5.9,
-      per_100g: { sugar_g: 8.48, fibre_g: 2.53, calories: 423 }, added_sugar_g: 0, sugar_source: 'natural_fruit', has_artificial_additives: false, _isPhab: true });
+    cols.push({ _slot: 'PHAB', product_name: 'Phab bar', nutri_iq_score: PHAB_SCORE, protein_per_100kcal: PHAB_PROTEIN_100KCAL,
+      per_100g: { sugar_g: PHAB_SUGAR_100G, fibre_g: 2.53, calories: 423 }, added_sugar_g: 0, sugar_source: 'natural_fruit', has_artificial_additives: false, _isPhab: true });
   }
 
   const srcLabel = s => ({ refined: '🟥 refined', syrup: '🟧 syrup', natural_fruit: '🟩 fruit/dates', dairy: '🟦 dairy', mixed: '🟨 mixed', unknown: '—' }[s] || '—');
@@ -1823,13 +1906,13 @@ function renderCompareResults(results) {
 
     ${isProteinComparison ? `
     <div class="phab-cta" style="margin-top:1rem;">
-      <div class="phab-cta-head">Phab NutriIQ — 82/100</div>
-      <div style="font-size:14px; color:rgba(255,255,255,0.85); line-height:1.55; margin:0.5rem 0 1rem;">You're comparing protein products — so we invited ourselves to the table. ${winner.nutri_iq_score >= 82 ? 'And honestly, Product ' + winner._slot + ' holds its own. Respect.' : 'Phab outscores both. Just the data talking.'}</div>
+      <div class="phab-cta-head">Phab NutriIQ — ${PHAB_SCORE}/100</div>
+      <div style="font-size:14px; color:rgba(255,255,255,0.85); line-height:1.55; margin:0.5rem 0 1rem;">You're comparing protein products — so we invited ourselves to the table. ${winner.nutri_iq_score >= PHAB_SCORE ? 'And honestly, Product ' + winner._slot + ' holds its own. Respect.' : 'Phab outscores both. Just the data talking.'}</div>
       <a href="https://www.getphab.com/collections/protein-bar" target="_blank" rel="noopener" style="display:block; background:#fff; color:#00B4C8; font-weight:700; font-size:14px; text-align:center; padding:0.75rem 1rem; border-radius:8px; text-decoration:none;">Care to grab a Phab? →</a>
     </div>` : `
     <div class="phab-cta" style="margin-top:1rem;">
-      <div class="phab-cta-head">built by phab · 82/100 on its own index</div>
-      <div style="font-size:14px; color:rgba(255,255,255,0.85); line-height:1.55; margin:0.5rem 0 1rem;">Go with Product ${winner._slot} — solid call. (Phab clocks 82 on this same index, just saying 👀)</div>
+      <div class="phab-cta-head">built by phab · ${PHAB_SCORE}/100 on its own index</div>
+      <div style="font-size:14px; color:rgba(255,255,255,0.85); line-height:1.55; margin:0.5rem 0 1rem;">Go with Product ${winner._slot} — solid call. (Phab clocks ${PHAB_SCORE} on this same index, just saying 👀)</div>
       <a href="https://www.getphab.com/collections/protein-bar" target="_blank" rel="noopener" style="display:block; background:#fff; color:#00B4C8; font-weight:700; font-size:14px; text-align:center; padding:0.75rem 1rem; border-radius:8px; text-decoration:none;">Care to grab a Phab? →</a>
     </div>`}
   `;
@@ -1873,7 +1956,8 @@ async function analyzeImage() {
         city: city,
         productName: document.getElementById('product-name-input').value.trim() || null,
         frontImageBase64: frontImageBase64,
-        frontImageType: frontImageBase64 ? 'image/jpeg' : null
+        frontImageType: frontImageBase64 ? 'image/jpeg' : null,
+        lang: appLang || 'en'
       })
     });
 
@@ -1939,6 +2023,7 @@ function showResults(data, city, notLabel) {
   currentResults = data;
   const s = data;
   const score = Math.round(s.nutri_iq_score);
+  data._punch = pickPunchLine(score); // same line shows on screen and on the share card
   const colorClass = s.score_color === 'great' ? 'score-great' : s.score_color === 'ok' ? 'score-ok' : 'score-bad';
   const strokeColor = s.score_color === 'great' ? '#22C55E' : s.score_color === 'ok' ? '#F59E0B' : '#EF4444';
   const circumference = 2 * Math.PI * 54;
@@ -1979,6 +2064,7 @@ function showResults(data, city, notLabel) {
       </div>
       <div class="score-grade ${colorClass}">${s.score_grade}</div>
       <div style="font-size:1rem; font-weight:600; margin-bottom:0.25rem;">${s.product_name}</div>
+      <div><div class="punch-banner">${data._punch}</div></div>
       <div class="score-tagline">${s.body_impact}</div>
     </div>
 
@@ -2026,7 +2112,7 @@ function showResults(data, city, notLabel) {
 
       if (isProteinCategory && phabBetter) return `
     <div class="phab-cta">
-      <div class="phab-cta-head">Phab NutriIQ — 82/100</div>
+      <div class="phab-cta-head">Phab NutriIQ — ${PHAB_SCORE}/100</div>
       <h3>This food scores ${phabGap} points lower than a Phab bar</h3>
       <div class="phab-compare-row">
         <div class="compare-col">
@@ -2038,7 +2124,7 @@ function showResults(data, city, notLabel) {
         <div class="compare-vs">vs</div>
         <div class="compare-col phab-col">
           <div class="compare-col-label">✦ Phab bar</div>
-          <div class="compare-col-val">5.9g</div>
+          <div class="compare-col-val">${PHAB_PROTEIN_100KCAL}g</div>
           <div class="compare-col-sub">protein / 100kcal</div>
           <div class="compare-col-sub">0g added sugar</div>
         </div>
@@ -2049,19 +2135,19 @@ function showResults(data, city, notLabel) {
 
       if (isProteinCategory) return `
     <div class="phab-cta">
-      <div class="phab-cta-head">Phab NutriIQ — 82/100</div>
+      <div class="phab-cta-head">Phab NutriIQ — ${PHAB_SCORE}/100</div>
       <h3>You're already eating smart 🎯</h3>
-      <div style="font-size:13px; color:rgba(255,255,255,0.75); margin-bottom:1rem;">This food scores ${Math.abs(phabGap)} points ${phabGap < 0 ? 'higher than' : 'equal to'} a Phab bar. Keep it up.</div>
+      <div style="font-size:13px; color:rgba(255,255,255,0.75); margin-bottom:1rem;">${phabGap < 0 ? `This food scores ${Math.abs(phabGap)} points higher than a Phab bar. Keep it up.` : 'This food matches a Phab bar point for point. Keep it up.'}</div>
       ${btn('Shop Phab bars →')}
     </div>`;
 
       let line;
-      if (score >= 75) line = `Solid choice — ${score}/100 is genuinely good. (Phab clocks 82 on this same index, just saying 👀)`;
-      else if (score >= 50) line = `${score}/100 — decent, but there's room to do better. Fun fact: Phab scores 82 on its own index. We checked. Twice.`;
-      else line = `${score}/100… this one isn't doing your body any favours. There happens to be an 82/100 option we may be <em>slightly</em> biased about.`;
+      if (score >= 75) line = `Solid choice — ${score}/100 is genuinely good. (Phab clocks ${PHAB_SCORE} on this same index, just saying 👀)`;
+      else if (score >= 50) line = `${score}/100 — decent, but there's room to do better. Fun fact: Phab scores ${PHAB_SCORE} on its own index. We checked. Twice.`;
+      else line = `${score}/100… this one isn't doing your body any favours. There happens to be an ${PHAB_SCORE}/100 option we may be <em>slightly</em> biased about.`;
       return `
     <div class="phab-cta">
-      <div class="phab-cta-head">built by phab · 82/100 on its own index</div>
+      <div class="phab-cta-head">built by phab · ${PHAB_SCORE}/100 on its own index</div>
       <div style="font-size:14px; color:rgba(255,255,255,0.85); line-height:1.55; margin:0.5rem 0 1rem;">${line}</div>
       ${btn('Care to grab a Phab? →')}
     </div>`;
@@ -2335,9 +2421,11 @@ function onCountryChange() {
 function onCityDropdownChange() {
   const city = document.getElementById('city-dropdown').value;
   document.getElementById('city-value').value = city;
+  maybeDefaultLangFromCity(city);
 }
 
 function setCity(city) {
+  maybeDefaultLangFromCity(city);
   document.getElementById('city-value').value = city;
   document.getElementById('city-detecting-badge').style.display = 'none';
   document.getElementById('city-manual-wrap').style.display = 'none';
@@ -2614,6 +2702,28 @@ function drawShareCard(canvas, data) {
     wrapText(data.body_impact, cx, impactY, W - 72, 22);
   }
 
+  // ---- Bollywood punch banner (masala poster strip) ----
+  if (data._punch) {
+    ctx.save();
+    ctx.translate(cx, 795);
+    ctx.rotate(-0.035);
+    ctx.font = 'bold 24px "Arial", sans-serif';
+    ctx.textAlign = 'center';
+    const tw = Math.min(ctx.measureText(data._punch).width, W - 100);
+    const bw = tw + 48, bh = 52;
+    // orange drop shadow then black strip
+    ctx.fillStyle = 'rgba(255,91,31,0.9)';
+    ctx.fillRect(-bw / 2 + 5, -bh / 2 + 5, bw, bh);
+    ctx.fillStyle = '#111111';
+    ctx.fillRect(-bw / 2, -bh / 2, bw, bh);
+    ctx.fillStyle = '#FFD600';
+    // shrink font if line is long
+    let fs = 24;
+    while (fs > 14 && ctx.measureText(data._punch).width > bw - 32) { fs -= 2; ctx.font = `bold ${fs}px "Arial", sans-serif`; }
+    ctx.fillText(data._punch, 0, 8);
+    ctx.restore();
+  }
+
   // ---- Bottom branding ----
   // Teal bottom bar
   ctx.fillStyle = '#00B4C8';
@@ -2716,6 +2826,8 @@ function showToast(msg) {
 // Init leaderboard and live stats
 renderLeaderboard();
 updateScanCount();
+// Paint language toggle (saved choice wins; city detection may flip the default later)
+setLang(appLang || 'en', false);
 // Auto-detect city from browser geolocation on page load
 autoDetectCity();
 
@@ -2904,7 +3016,7 @@ function openFeedCard(idx) {
       neutral: [`Scanned from ${r.city || 'unknown city'} · Tier: ${(r.tier_label||'').replace(/_/g,' ')}`]
     },
     body_impact: `This product scored ${r.nutri_iq_score}/100 on the NutriIQ scale. ${r.nutri_iq_score < 50 ? 'Expect a glycaemic spike and low satiety over the next 2 hours.' : r.nutri_iq_score < 70 ? 'Moderate impact — decent fuel but room for improvement.' : 'Good fuel choice — sustained energy likely.'}`,
-    phab_comparison: { this_protein_per_100kcal: r.protein_per_100kcal ?? 0, phab_protein_per_100kcal: 17.5, this_sugar_per_100g: r.sugar_per_100g ?? 0, phab_sugar_per_100g: 0, nutri_iq_gap: 82 - (r.nutri_iq_score ?? 0) }
+    phab_comparison: { this_protein_per_100kcal: r.protein_per_100kcal ?? 0, phab_protein_per_100kcal: PHAB_PROTEIN_100KCAL, this_sugar_per_100g: r.sugar_per_100g ?? 0, phab_sugar_per_100g: PHAB_SUGAR_100G, nutri_iq_gap: PHAB_SCORE - (r.nutri_iq_score ?? 0) }
   };
   const overlay = document.getElementById('share-modal-overlay');
   overlay.classList.remove('hidden');
