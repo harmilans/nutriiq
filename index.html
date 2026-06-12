@@ -8,25 +8,25 @@
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 
   :root {
-    --bg:          #F0FAFB;
-    --surface:     #ffffff;
-    --surface2:    #E6F7F9;
-    --border:      #C8ECF0;
-    --text:        #0D1F22;
-    --muted:       #5A7A80;
-    --phab:        #00B4C8;
-    --phab-dark:   #009AAC;
-    --phab-light:  #E0F7FA;
-    --obsidian:    #00B4C8;
-    --graphite:    #0D1F22;
-    --brown:       #5C3317;
-    --brown-light: #F9EFE7;
-    --green:       #16a34a;
-    --green-light: #dcfce7;
-    --yellow:      #d97706;
-    --yellow-light:#fef3c7;
-    --red:         #dc2626;
-    --red-light:   #fee2e2;
+    --bg:          #06090A;
+    --surface:     #0E1A1D;
+    --surface2:    #112028;
+    --border:      #1A3040;
+    --text:        #E8F4F7;
+    --muted:       #6B9BA8;
+    --phab:        #00D4EA;
+    --phab-dark:   #00B8CC;
+    --phab-light:  rgba(0,212,234,0.12);
+    --obsidian:    #00D4EA;
+    --graphite:    #E8F4F7;
+    --brown:       #C9A46E;
+    --brown-light: rgba(201,164,110,0.1);
+    --green:       #22C55E;
+    --green-light: rgba(34,197,94,0.12);
+    --yellow:      #F59E0B;
+    --yellow-light:rgba(245,158,11,0.12);
+    --red:         #EF4444;
+    --red-light:   rgba(239,68,68,0.12);
     --score-great: #22C55E;
     --score-ok:    #F59E0B;
     --score-bad:   #EF4444;
@@ -47,7 +47,7 @@
 
   /* NAV */
   nav {
-    background: #fff;
+    background: #060A0B;
     border-bottom: 1.5px solid var(--border);
     padding: 0 1.5rem;
     height: 56px;
@@ -93,11 +93,250 @@
   .page { display: none; }
   .page.active { display: block; }
 
-  /* HERO */
+  /* PHYSICS HERO */
+  .hero-physics {
+    position: relative;
+    height: 420px;
+    overflow: hidden;
+    background: #06090A;
+    border-bottom: 1px solid var(--border);
+  }
+  #physics-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .hero-content {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 2.5rem 1.5rem;
+    z-index: 2;
+    background: linear-gradient(to top, #06090A 55%, transparent);
+  }
+  .hero-eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--phab);
+    font-weight: 700;
+    font-family: 'Space Mono', monospace;
+    margin-bottom: 0.5rem;
+  }
+  .hero-content h1 {
+    font-size: clamp(1.8rem, 5vw, 2.4rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    color: #fff;
+    margin-bottom: 0.65rem;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .hero-content h1 em {
+    color: var(--phab);
+    font-style: italic;
+  }
+  .hero-sub {
+    color: var(--muted);
+    font-size: 15px;
+    margin-bottom: 1.1rem;
+  }
+  .hero-cta-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .hero-cta-btn {
+    background: var(--phab);
+    color: #06090A;
+    font-weight: 800;
+    font-size: 14px;
+    padding: 0.65rem 1.5rem;
+    border-radius: 100px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 0 20px rgba(0,212,234,0.3);
+  }
+  .hero-cta-btn:hover {
+    transform: scale(1.04);
+    box-shadow: 0 0 30px rgba(0,212,234,0.5);
+  }
+
+  /* STATS TICKER */
+  .stats-ticker {
+    overflow: hidden;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    padding: 10px 0;
+  }
+  .ticker-track {
+    display: flex;
+    gap: 3rem;
+    white-space: nowrap;
+    animation: ticker 22s linear infinite;
+  }
+  .ticker-track span {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .ticker-track span strong { color: var(--phab); }
+  @keyframes ticker {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* FLAVOUR CARDS */
+  .flavours-section {
+    padding: 1.75rem 1.5rem;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+  .flavours-header h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.2rem;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .flavours-header p {
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 1.1rem;
+  }
+  .flavours-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+  .flavour-card {
+    aspect-ratio: 1;
+    cursor: pointer;
+    perspective: 600px;
+    position: relative;
+  }
+  .fc-front, .fc-back {
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transition: transform 0.5s cubic-bezier(0.4,0,0.2,1);
+  }
+  .fc-front {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: center;
+  }
+  .fc-back {
+    background: var(--phab);
+    transform: rotateY(180deg);
+    justify-content: center;
+    align-items: flex-start;
+    gap: 0.35rem;
+    padding: 1.1rem;
+  }
+  .flavour-card.flipped .fc-front { transform: rotateY(-180deg); }
+  .flavour-card.flipped .fc-back  { transform: rotateY(0deg); }
+  .fc-emoji { font-size: 2rem; line-height: 1; }
+  .fc-name  { font-size: 12px; font-weight: 700; color: var(--text); }
+  .fc-score {
+    font-family: 'Space Mono', monospace;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--phab);
+    line-height: 1;
+  }
+  .fc-back .fc-score { color: #06090A; font-size: 1.6rem; }
+  .fc-macro { font-size: 12px; color: #06090A; font-weight: 700; }
+  .fc-tag {
+    font-size: 10px;
+    background: rgba(0,0,0,0.15);
+    padding: 2px 8px;
+    border-radius: 20px;
+    color: #06090A;
+    margin-top: auto;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* X-RAY SECTION */
+  .xray-section {
+    padding: 1.5rem 1.5rem 2rem;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+  .xray-label {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--phab);
+    font-family: 'Space Mono', monospace;
+    margin-bottom: 0.4rem;
+  }
+  .xray-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 1.1rem;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .xray-bar {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    position: relative;
+    height: 60px;
+    display: flex;
+  }
+  .xray-scan-line {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 2px;
+    background: rgba(0,212,234,0.9);
+    z-index: 10;
+    box-shadow: 0 0 12px #00D4EA;
+    transform: translateX(-4px);
+    pointer-events: none;
+  }
+  .xray-ingredient {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+  .xi-fill {
+    position: absolute;
+    inset: 0;
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  .xi-label {
+    position: absolute;
+    bottom: 4px;
+    left: 4px;
+    font-size: 9px;
+    font-family: 'Space Mono', monospace;
+    color: rgba(255,255,255,0.9);
+    white-space: nowrap;
+    z-index: 2;
+    opacity: 0;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+
+  /* HERO OLD KEPT AS FALLBACK (hidden) */
   .hero {
-    background: var(--bg);
-    border-bottom: 1.5px solid var(--border);
-    padding: 3.5rem 1.5rem 3rem;
+    display: none;
+  }
     text-align: center;
     position: relative;
     overflow: hidden;
@@ -1328,6 +1567,9 @@
 </style>
 <!-- Lottie Web player (4KB gzipped) -->
 <script src="https://unpkg.com/@lottiefiles/lottie-player@2/dist/lottie-player.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 </head>
 <body>
 
@@ -1344,19 +1586,137 @@
 
 <!-- SCAN PAGE -->
 <div class="page active" id="page-scan">
-  <div class="hero">
-    <div class="hero-inner">
+
+  <!-- PHYSICS HERO -->
+  <div class="hero-physics" id="hero-physics">
+    <canvas id="physics-canvas"></canvas>
+    <div class="hero-content">
       <div class="hero-eyebrow">Powered by phab × AI</div>
       <h1>What's your snack <em>really</em> doing to you?</h1>
       <p class="hero-sub">Scan any label. Get your NutriIQ score in 10 seconds.</p>
-      <div class="hero-pills">
-        <span class="hero-pill">💪 Protein Quality</span>
-        <span class="hero-pill">🩸 Sugar Risk</span>
-        <span class="hero-pill">🌿 Ingredient Cleanliness</span>
+      <div class="hero-cta-row">
+        <button class="hero-cta-btn" onclick="scrollToScanner()">📸 Scan Now</button>
+        <div class="scan-badge">
+          <span class="dot"></span>
+          <span id="scan-count">Be the first to scan today</span>
+        </div>
       </div>
-      <div class="scan-badge">
-        <span class="dot"></span>
-        <span id="scan-count">Be the first to scan today</span>
+    </div>
+  </div>
+
+  <!-- STATS TICKER -->
+  <div class="stats-ticker">
+    <div class="ticker-track">
+      <span>⚡ <strong>5.9g</strong> protein per 100kcal</span>
+      <span>🩸 <strong>8.48g</strong> sugar per 100g</span>
+      <span>🌿 No artificial additives</span>
+      <span>💪 NutriIQ Score: <strong>82</strong>/100</span>
+      <span>🏆 Top 7% in India</span>
+      <span>✅ Clean label certified</span>
+      <span>⚡ <strong>5.9g</strong> protein per 100kcal</span>
+      <span>🩸 <strong>8.48g</strong> sugar per 100g</span>
+      <span>🌿 No artificial additives</span>
+      <span>💪 NutriIQ Score: <strong>82</strong>/100</span>
+      <span>🏆 Top 7% in India</span>
+      <span>✅ Clean label certified</span>
+    </div>
+  </div>
+
+  <!-- FLAVOUR CARDS -->
+  <div class="flavours-section">
+    <div class="flavours-header">
+      <h3>phab protein bars</h3>
+      <p>Real ingredients. No compromises. Tap to flip.</p>
+    </div>
+    <div class="flavours-grid">
+      <div class="flavour-card" data-flavour="dark-choc">
+        <div class="fc-front">
+          <div class="fc-emoji">🍫</div>
+          <div class="fc-name">Dark Chocolate</div>
+          <div class="fc-score">82</div>
+        </div>
+        <div class="fc-back">
+          <div class="fc-score">82</div>
+          <div class="fc-macro">Protein 10g</div>
+          <div class="fc-macro">Sugar 8.5g</div>
+          <div class="fc-macro">190 kcal</div>
+          <div class="fc-tag">No artificial additives</div>
+        </div>
+      </div>
+      <div class="flavour-card" data-flavour="peanut">
+        <div class="fc-front">
+          <div class="fc-emoji">🥜</div>
+          <div class="fc-name">Peanut Butter</div>
+          <div class="fc-score">80</div>
+        </div>
+        <div class="fc-back">
+          <div class="fc-score">80</div>
+          <div class="fc-macro">Protein 10g</div>
+          <div class="fc-macro">Sugar 8g</div>
+          <div class="fc-macro">195 kcal</div>
+          <div class="fc-tag">Real peanuts</div>
+        </div>
+      </div>
+      <div class="flavour-card" data-flavour="almond-oat">
+        <div class="fc-front">
+          <div class="fc-emoji">🌾</div>
+          <div class="fc-name">Almond &amp; Oat</div>
+          <div class="fc-score">81</div>
+        </div>
+        <div class="fc-back">
+          <div class="fc-score">81</div>
+          <div class="fc-macro">Protein 9g</div>
+          <div class="fc-macro">Sugar 7.5g</div>
+          <div class="fc-macro">185 kcal</div>
+          <div class="fc-tag">Whole oats</div>
+        </div>
+      </div>
+      <div class="flavour-card" data-flavour="choco-almond">
+        <div class="fc-front">
+          <div class="fc-emoji">🌰</div>
+          <div class="fc-name">Choco Almond</div>
+          <div class="fc-score">83</div>
+        </div>
+        <div class="fc-back">
+          <div class="fc-score">83</div>
+          <div class="fc-macro">Protein 10.5g</div>
+          <div class="fc-macro">Sugar 8.2g</div>
+          <div class="fc-macro">192 kcal</div>
+          <div class="fc-tag">Date-sweetened</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- X-RAY SECTION -->
+  <div class="xray-section" id="xray-section">
+    <div class="xray-label">Ingredient X-Ray</div>
+    <h3 class="xray-title">What's actually inside a phab bar?</h3>
+    <div class="xray-bar" id="xray-bar">
+      <div class="xray-scan-line" id="xray-scan-line"></div>
+      <div class="xray-ingredient" data-pct="28" data-color="#00D4EA">
+        <div class="xi-fill"></div>
+        <span class="xi-label">Whey 28%</span>
+      </div>
+      <div class="xray-ingredient" data-pct="18" data-color="#4ECCA3">
+        <div class="xi-fill"></div>
+        <span class="xi-label">Oats 18%</span>
+      </div>
+      <div class="xray-ingredient" data-pct="15" data-color="#8B5E3C">
+        <div class="xi-fill"></div>
+        <span class="xi-label">Dark Choc 15%</span>
+      </div>
+      <div class="xray-ingredient" data-pct="12" data-color="#C9A46E">
+        <div class="xi-fill"></div>
+        <span class="xi-label">Almonds 12%</span>
+      </div>
+      <div class="xray-ingredient" data-pct="10" data-color="#B5451B">
+        <div class="xi-fill"></div>
+        <span class="xi-label">Dates 10%</span>
+      </div>
+      <div class="xray-ingredient" data-pct="17" data-color="#2A4A5A">
+        <div class="xi-fill"></div>
+        <span class="xi-label">Other 17%</span>
       </div>
     </div>
   </div>
@@ -3492,6 +3852,150 @@ function initFeed() {
     feedInterval = setInterval(fetchFeed, 30000);
   }
 }
+
+// ===================== SCROLL TO SCANNER =====================
+function scrollToScanner() {
+  document.getElementById('upload-zone').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ===================== PHYSICS HERO =====================
+function initPhysicsHero() {
+  const canvas = document.getElementById('physics-canvas');
+  if (!canvas || typeof Matter === 'undefined') return;
+  const { Engine, Render, Runner, Bodies, Composite, Events } = Matter;
+  const W = canvas.parentElement.offsetWidth || window.innerWidth;
+  const H = 420;
+
+  const engine = Engine.create({ gravity: { y: 0.35 } });
+  const render = Render.create({
+    canvas,
+    engine,
+    options: { width: W, height: H, wireframes: false, background: 'transparent' }
+  });
+
+  const labels = ['💪','🥜','🌰','🌾','🍫','🫐','⚡','✅','🌿','💊'];
+  const bodies = labels.map((label, i) => {
+    const r = 20 + Math.random() * 12;
+    const b = Bodies.circle(
+      Math.random() * (W - 80) + 40,
+      -60 - i * 45,
+      r,
+      { restitution: 0.55, friction: 0.08, render: { fillStyle: 'rgba(0,212,234,0.10)', strokeStyle: 'rgba(0,212,234,0.5)', lineWidth: 1.5 }, label }
+    );
+    return b;
+  });
+
+  const ground = Bodies.rectangle(W/2, H + 30, W * 2, 60, { isStatic: true, render: { fillStyle: 'transparent' } });
+  const wallL  = Bodies.rectangle(-30, H/2, 60, H*2, { isStatic: true, render: { fillStyle: 'transparent' } });
+  const wallR  = Bodies.rectangle(W+30, H/2, 60, H*2, { isStatic: true, render: { fillStyle: 'transparent' } });
+
+  Composite.add(engine.world, [...bodies, ground, wallL, wallR]);
+
+  Events.on(render, 'afterRender', () => {
+    const ctx = render.context;
+    bodies.forEach(b => {
+      ctx.save();
+      ctx.translate(b.position.x, b.position.y);
+      ctx.rotate(b.angle);
+      ctx.font = `${b.circleRadius * 1.1}px serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(b.label, 0, 0);
+      ctx.restore();
+    });
+  });
+
+  Runner.run(Runner.create(), engine);
+  Render.run(render);
+
+  setInterval(() => {
+    bodies.forEach(b => {
+      if (b.position.y > H + 120) {
+        Matter.Body.setPosition(b, { x: Math.random() * (W - 80) + 40, y: -60 });
+        Matter.Body.setVelocity(b, { x: (Math.random() - 0.5) * 3, y: 1 });
+      }
+    });
+  }, 2500);
+}
+
+// ===================== FLAVOUR FLIP CARDS =====================
+function initFlavourCards() {
+  document.querySelectorAll('.flavour-card').forEach(card => {
+    card.addEventListener('click', () => card.classList.toggle('flipped'));
+    card.addEventListener('mousemove', e => {
+      if (card.classList.contains('flipped')) return;
+      const r = card.getBoundingClientRect();
+      const x = ((e.clientX - r.left) / r.width  - 0.5) * 16;
+      const y = ((e.clientY - r.top)  / r.height - 0.5) * -16;
+      card.style.transform = `perspective(600px) rotateX(${y}deg) rotateY(${x}deg) scale(1.03)`;
+    });
+    card.addEventListener('mouseleave', () => {
+      if (!card.classList.contains('flipped')) card.style.transform = '';
+    });
+  });
+}
+
+// ===================== X-RAY SCROLL REVEAL =====================
+function initXrayReveal() {
+  const ingredients = document.querySelectorAll('.xray-ingredient');
+  const scanLine    = document.getElementById('xray-scan-line');
+  const bar         = document.getElementById('xray-bar');
+  const section     = document.getElementById('xray-section');
+  if (!bar || !scanLine || !ingredients.length || !section) return;
+
+  let revealed = false;
+  const observer = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting && !revealed) {
+      revealed = true;
+      observer.disconnect();
+      runXrayAnimation();
+    }
+  }, { threshold: 0.5 });
+  observer.observe(section);
+
+  function runXrayAnimation() {
+    const barW = bar.offsetWidth || 320;
+    const colors = ['#00D4EA','#4ECCA3','#8B5E3C','#C9A46E','#B5451B','#2A4A5A'];
+    let pcts = [];
+    ingredients.forEach(el => pcts.push(+el.dataset.pct));
+    const total = pcts.reduce((a,b)=>a+b, 0);
+    let cumulative = 0;
+    const startFractions = pcts.map(p => { const f = cumulative/total; cumulative += p; return f; });
+
+    const duration = 1400;
+    const start = performance.now();
+
+    function frame(now) {
+      const progress = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      scanLine.style.transform = `translateX(${ease * barW}px)`;
+
+      ingredients.forEach((el, i) => {
+        if (ease >= startFractions[i]) {
+          const fill = el.querySelector('.xi-fill');
+          const lbl  = el.querySelector('.xi-label');
+          if (fill && !fill._done) {
+            fill._done = true;
+            fill.style.background = colors[i] || '#00D4EA';
+            fill.style.transition = 'transform 0.35s ease-out';
+            fill.style.transform  = 'scaleX(1)';
+            if (lbl) { lbl.style.transition = 'opacity 0.3s 0.3s'; lbl.style.opacity = '1'; }
+          }
+        }
+      });
+
+      if (progress < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+}
+
+// ===================== INIT ANIMATIONS =====================
+window.addEventListener('DOMContentLoaded', () => {
+  initPhysicsHero();
+  initFlavourCards();
+  initXrayReveal();
+});
 </script>
 </body>
 </html>
