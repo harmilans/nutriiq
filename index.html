@@ -8,25 +8,25 @@
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 
   :root {
-    --bg:          #06090A;
-    --surface:     #0E1A1D;
-    --surface2:    #112028;
-    --border:      #1A3040;
-    --text:        #E8F4F7;
-    --muted:       #6B9BA8;
-    --phab:        #00D4EA;
-    --phab-dark:   #00B8CC;
-    --phab-light:  rgba(0,212,234,0.12);
-    --obsidian:    #00D4EA;
-    --graphite:    #E8F4F7;
-    --brown:       #C9A46E;
-    --brown-light: rgba(201,164,110,0.1);
-    --green:       #22C55E;
-    --green-light: rgba(34,197,94,0.12);
-    --yellow:      #F59E0B;
-    --yellow-light:rgba(245,158,11,0.12);
-    --red:         #EF4444;
-    --red-light:   rgba(239,68,68,0.12);
+    --bg:          #F0FAFB;
+    --surface:     #ffffff;
+    --surface2:    #E6F7F9;
+    --border:      #C8ECF0;
+    --text:        #0D1F22;
+    --muted:       #5A7A80;
+    --phab:        #00B4C8;
+    --phab-dark:   #009AAC;
+    --phab-light:  #E0F7FA;
+    --obsidian:    #00B4C8;
+    --graphite:    #0D1F22;
+    --brown:       #5C3317;
+    --brown-light: #F9EFE7;
+    --green:       #16a34a;
+    --green-light: #dcfce7;
+    --yellow:      #d97706;
+    --yellow-light:#fef3c7;
+    --red:         #dc2626;
+    --red-light:   #fee2e2;
     --score-great: #22C55E;
     --score-ok:    #F59E0B;
     --score-bad:   #EF4444;
@@ -47,7 +47,7 @@
 
   /* NAV */
   nav {
-    background: #060A0B;
+    background: #fff;
     border-bottom: 1.5px solid var(--border);
     padding: 0 1.5rem;
     height: 56px;
@@ -98,7 +98,7 @@
     position: relative;
     height: 420px;
     overflow: hidden;
-    background: #06090A;
+    background: #EAF8FB;
     border-bottom: 1px solid var(--border);
   }
   #physics-canvas {
@@ -112,7 +112,7 @@
     bottom: 0; left: 0; right: 0;
     padding: 2.5rem 1.5rem;
     z-index: 2;
-    background: linear-gradient(to top, #06090A 55%, transparent);
+    background: linear-gradient(to top, #EAF8FB 55%, transparent);
   }
   .hero-eyebrow {
     font-size: 11px;
@@ -128,7 +128,7 @@
     font-weight: 800;
     letter-spacing: -0.03em;
     line-height: 1.1;
-    color: #fff;
+    color: var(--text);
     margin-bottom: 0.65rem;
     font-family: 'Space Grotesk', sans-serif;
   }
@@ -149,7 +149,7 @@
   }
   .hero-cta-btn {
     background: var(--phab);
-    color: #06090A;
+    color: #fff;
     font-weight: 800;
     font-size: 14px;
     padding: 0.65rem 1.5rem;
@@ -258,14 +258,14 @@
     color: var(--phab);
     line-height: 1;
   }
-  .fc-back .fc-score { color: #06090A; font-size: 1.6rem; }
-  .fc-macro { font-size: 12px; color: #06090A; font-weight: 700; }
+  .fc-back .fc-score { color: #fff; font-size: 1.6rem; }
+  .fc-macro { font-size: 12px; color: #fff; font-weight: 700; }
   .fc-tag {
     font-size: 10px;
-    background: rgba(0,0,0,0.15);
+    background: rgba(255,255,255,0.25);
     padding: 2px 8px;
     border-radius: 20px;
-    color: #06090A;
+    color: #fff;
     margin-top: auto;
     font-family: 'Space Mono', monospace;
   }
@@ -3880,7 +3880,7 @@ function initPhysicsHero() {
       Math.random() * (W - 80) + 40,
       -60 - i * 45,
       r,
-      { restitution: 0.55, friction: 0.08, render: { fillStyle: 'rgba(0,212,234,0.10)', strokeStyle: 'rgba(0,212,234,0.5)', lineWidth: 1.5 }, label }
+      { restitution: 0.55, friction: 0.08, render: { fillStyle: 'rgba(0,180,200,0.08)', strokeStyle: 'rgba(0,180,200,0.35)', lineWidth: 1.5 }, label }
     );
     return b;
   });
