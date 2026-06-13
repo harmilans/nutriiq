@@ -3912,20 +3912,21 @@ async function fetchProductByBarcode(barcode) {
     loading.style.display = 'none';
 
     if (json.status !== 1 || !json.product) {
-      resultEl.innerHTML = `
-        <div style="text-align:center; padding:1.5rem; background:var(--surface); border:1.5px solid var(--border); border-radius:14px;">
-          <div style="font-size:2.5rem; margin-bottom:0.5rem;">🤷</div>
-          <div style="font-weight:700; margin-bottom:0.4rem;">Product not found</div>
-          <div style="font-size:13px; color:var(--muted); margin-bottom:1rem;">Barcode <code>${barcode}</code> isn't in the Open Food Facts database yet.</div>
-          <button onclick="setScanMode('single')" style="padding:10px 20px; background:var(--phab); color:#fff; border:none; border-radius:20px; font-family:inherit; font-weight:700; cursor:pointer;">📸 Scan nutrition label instead</button>
-        </div>`;
+      loading.style.display = 'none';
+      stopBarcodeCamera();
+      showToast('📸 Barcode not in database — opening label scanner');
+      setScanMode('single');
+      setTimeout(() => openCamera(), 500);
       return;
     }
 
     renderBarcodeResult(json.product, barcode);
   } catch (e) {
     loading.style.display = 'none';
-    resultEl.innerHTML = `<div style="text-align:center; padding:1.5rem; color:var(--muted);">Network error — check connection and try again.<br><button onclick="setScanMode('single')" style="margin-top:1rem; padding:8px 16px; background:var(--phab); color:#fff; border:none; border-radius:20px; font-family:inherit; cursor:pointer;">Scan label instead</button></div>`;
+    stopBarcodeCamera();
+    showToast('📸 Network error — switching to label scan');
+    setScanMode('single');
+    setTimeout(() => openCamera(), 500);
   }
 }
 
