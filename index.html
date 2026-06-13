@@ -1757,17 +1757,6 @@
     </div>
   </div>
 
-  <div class="results-wrap" id="results-wrap">
-    <!-- Filled by JS -->
-  </div>
-
-  <!-- DEBUG PANEL -->
-  <div id="debug-panel" style="display:none; max-width:520px; margin:1rem auto; padding:0 1rem;">
-    <details open>
-      <summary style="font-size:13px; font-weight:600; cursor:pointer; color:var(--muted); margin-bottom:0.5rem;">🔍 Debug: Raw API response</summary>
-      <pre style="background:#1a1a2e; color:#a0e0ff; font-size:11px; padding:1rem; border-radius:8px; overflow-x:auto; white-space:pre-wrap; word-break:break-all;"></pre>
-    </details>
-  </div>
   </div><!-- /single-scan-section -->
 
   <!-- COMPARE MODE -->
@@ -1826,6 +1815,19 @@
 
     <!-- Result -->
     <div id="barcode-result"></div>
+  </div>
+
+  <!-- Shared results area (used by both label scan and barcode scan) -->
+  <div class="results-wrap" id="results-wrap">
+    <!-- Filled by JS -->
+  </div>
+
+  <!-- DEBUG PANEL -->
+  <div id="debug-panel" style="display:none; max-width:520px; margin:1rem auto; padding:0 1rem;">
+    <details open>
+      <summary style="font-size:13px; font-weight:600; cursor:pointer; color:var(--muted); margin-bottom:0.5rem;">🔍 Debug: Raw API response</summary>
+      <pre style="background:#1a1a2e; color:#a0e0ff; font-size:11px; padding:1rem; border-radius:8px; overflow-x:auto; white-space:pre-wrap; word-break:break-all;"></pre>
+    </details>
   </div>
 </div>
 
@@ -3902,9 +3904,10 @@ async function fetchProductByBarcode(barcode) {
   const resultEl = document.getElementById('barcode-result');
   loading.style.display = 'block';
   resultEl.innerHTML = '';
+  document.getElementById('results-wrap').classList.remove('active');
 
   try {
-    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${barcode}.json?fields=product_name,brands,nutriments,additives_tags,ingredients_text,serving_size,image_front_url`);
+    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${barcode}.json?fields=product_name,brands,nutriments,additives_tags,additives_original_tags,ingredients_text,serving_size,image_front_url`);
     const json = await res.json();
     loading.style.display = 'none';
 
@@ -3955,79 +3958,145 @@ function computeNutriIQFromNutriments(n, additivesTags) {
 function renderBarcodeResult(p, barcode) {
   const n = p.nutriments || {};
   const name = p.product_name || p.brands || `Product (${barcode})`;
+
+  // Parse additive names from tags like ["en:e471","en:e322i"] → ["E471","E322i"]
   const additivesTags = p.additives_tags || [];
+  const additiveNames = additivesTags.map(t => t.replace(/^[a-z]+:/, '').toUpperCase());
+
   const score = computeNutriIQFromNutriments(n, additivesTags);
   const protein = n.proteins_100g || 0;
   const sugar = n.sugars_100g || 0;
   const calories = n['energy-kcal_100g'] || Math.round((n.energy_100g || 0) / 4.184);
-  const fibre = n.fiber_100g || n.fibre_100g || 0;
+  const fibre = n.fiber_100g || n['fiber_100g'] || n.fibre_100g || 0;
   const fat = n.fat_100g || 0;
+  const satFat = n['saturated-fat_100g'] || 0;
+  const carbs = n.carbohydrates_100g || 0;
+  const sodium = n.sodium_100g ? Math.round(n.sodium_100g * 1000) : (n.salt_100g ? Math.round(n.salt_100g * 400) : 0);
+  const transFat = n['trans-fat_100g'] || 0;
   const proteinPer100kcal = calories > 0 ? (protein / calories * 100) : 0;
   const hasAdditives = additivesTags.length > 0;
-  const scoreColor = score >= 70 ? '#22C55E' : score >= 45 ? '#F59E0B' : '#EF4444';
-  const scoreLabel = score >= 75 ? 'Excellent' : score >= 60 ? 'Good' : score >= 45 ? 'Decent' : score >= 30 ? 'Poor' : 'Harmful';
-  const phabGap = PHAB_SCORE - score;
+  const scoreGrade = score >= 85 ? 'Excellent' : score >= 70 ? 'Good' : score >= 50 ? 'Decent' : score >= 30 ? 'Poor' : 'Harmful';
+  const scoreColor = score >= 70 ? 'great' : score >= 45 ? 'ok' : 'bad';
+  const phabScore = typeof PHAB_SCORE !== 'undefined' ? PHAB_SCORE : 74;
+  const phabGap = Math.round(phabScore - score);
 
+  // Build verdicts client-side
+  const good = [], bad = [], neutral = [];
+  if (protein >= 15) good.push(`High protein: ${protein.toFixed(1)}g per 100g — muscle-friendly`);
+  else if (protein >= 8) good.push(`Decent protein: ${protein.toFixed(1)}g per 100g`);
+  if (fibre >= 5) good.push(`Good fibre content: ${fibre.toFixed(1)}g per 100g — gut-friendly`);
+  else if (fibre >= 3) good.push(`Some fibre: ${fibre.toFixed(1)}g per 100g`);
+  if (!hasAdditives) good.push('No artificial additives detected — clean ingredient list');
+  if (transFat === 0 && satFat < 3) good.push(`Low saturated fat: ${satFat.toFixed(1)}g per 100g`);
+
+  if (sugar > 15) bad.push(`High sugar: ${sugar.toFixed(1)}g per 100g — glycaemic spike risk`);
+  else if (sugar > 8) bad.push(`Moderate sugar: ${sugar.toFixed(1)}g per 100g`);
+  if (hasAdditives) {
+    const nameList = additiveNames.length <= 6 ? additiveNames.join(', ') : additiveNames.slice(0,6).join(', ') + ` +${additiveNames.length - 6} more`;
+    bad.push(`${additiveNames.length} additive${additiveNames.length>1?'s':''} detected: ${nameList}`);
+  }
+  if (satFat > 5) bad.push(`High saturated fat: ${satFat.toFixed(1)}g per 100g`);
+  if (transFat > 0) bad.push(`Contains trans fat: ${transFat.toFixed(2)}g per 100g — avoid`);
+  if (protein < 5 && score < 60) bad.push(`Low protein: only ${protein.toFixed(1)}g per 100g`);
+
+  neutral.push('Nutrition data sourced from Open Food Facts community database');
+  if (p.serving_size) neutral.push(`Serving size: ${p.serving_size}`);
+
+  // Generate body_impact based on score
+  let body_impact;
+  if (score >= 75) {
+    body_impact = `At ${score}/100, this is clean fuel your body will thank you for. With ${protein.toFixed(1)}g protein and ${fibre.toFixed(1)}g fibre per 100g, it supports sustained energy and muscle recovery — no crash, no compromise.`;
+  } else if (score >= 50) {
+    body_impact = `Scoring ${score}/100, this is an acceptable choice with some caveats. ${protein.toFixed(1)}g protein is decent, but ${sugar.toFixed(1)}g sugar per 100g will cause a moderate glycaemic rise. Fine occasionally, not ideal daily.`;
+  } else {
+    body_impact = `At ${score}/100, this product puts your body on the back foot. ${sugar.toFixed(1)}g sugar per 100g risks a blood sugar spike and crash${hasAdditives ? `, and ${additiveNames.length} additives add to the processing load` : ''}. There are better options out there.`;
+  }
+
+  // Build the synthetic result object matching API response shape
+  const syntheticResult = {
+    product_name: name,
+    nutri_iq_score: score,
+    score_grade: scoreGrade,
+    score_color: scoreColor,
+    per_100g: {
+      calories: Math.round(calories),
+      protein_g: protein,
+      carbs_g: carbs,
+      sugar_g: sugar,
+      fat_g: fat,
+      saturated_fat_g: satFat,
+      fibre_g: fibre,
+      sodium_mg: sodium
+    },
+    serving_size_g: p.serving_size ? parseFloat(p.serving_size) : null,
+    ingredients_count: p.ingredients_text ? p.ingredients_text.split(',').length : null,
+    has_artificial_additives: hasAdditives,
+    has_trans_fat: transFat > 0,
+    has_refined_flour: null,
+    added_sugar_g: null,
+    sugar_source: 'unknown',
+    gl_index: Math.round(sugar * 0.7 + carbs * 0.3),
+    protein_per_100kcal: proteinPer100kcal,
+    claims_audit: null,
+    verdicts: {
+      good: good.slice(0, 3),
+      bad: bad.slice(0, 3),
+      neutral: neutral.slice(0, 2)
+    },
+    body_impact,
+    phab_comparison: {
+      this_protein_per_100kcal: proteinPer100kcal,
+      phab_protein_per_100kcal: 5.9,
+      this_sugar_per_100g: sugar,
+      phab_sugar_per_100g: 8.48,
+      nutri_iq_gap: phabGap
+    },
+    is_estimate: false,
+    estimate_basis: null,
+    not_a_food_label: false,
+    _source: 'barcode',
+    _barcode: barcode,
+    _image_url: p.image_front_url || null
+  };
+
+  // Show product image in the barcode-result div as a header
   const resultEl = document.getElementById('barcode-result');
-  resultEl.innerHTML = `
-    <div style="background:var(--surface); border:1.5px solid var(--border); border-radius:14px; overflow:hidden; margin-bottom:1rem;">
-      ${p.image_front_url ? `<img src="${p.image_front_url}" style="width:100%; max-height:160px; object-fit:contain; background:#f5f5f5; display:block;">` : ''}
-      <div style="padding:1.25rem;">
-        <div style="font-size:11px; font-family:'Space Mono',monospace; color:var(--muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.08em;">${p.brands || ''}</div>
-        <div style="font-size:18px; font-weight:800; color:var(--text); margin-bottom:1rem; line-height:1.2;">${name}</div>
+  resultEl.innerHTML = p.image_front_url
+    ? `<div style="max-width:520px; margin:0 auto 0.5rem; text-align:center;">
+        <img src="${p.image_front_url}" style="max-height:140px; object-fit:contain; border-radius:10px; background:var(--surface2);">
+        <div style="font-size:11px; color:var(--muted); font-family:'Space Mono',monospace; margin-top:4px; text-transform:uppercase;">via Open Food Facts · Barcode: ${barcode}</div>
+       </div>`
+    : `<div style="max-width:520px; margin:0 auto 0.5rem; text-align:center; font-size:11px; color:var(--muted); font-family:'Space Mono',monospace; text-transform:uppercase;">via Open Food Facts · Barcode: ${barcode}</div>`;
 
-        <!-- Score ring simple -->
-        <div style="display:flex; align-items:center; gap:1.25rem; margin-bottom:1.25rem;">
-          <div style="width:80px; height:80px; border-radius:50%; border:5px solid ${scoreColor}; display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0;">
-            <div style="font-size:24px; font-weight:800; color:${scoreColor}; line-height:1;">${score}</div>
-            <div style="font-size:9px; color:var(--muted); font-family:'Space Mono',monospace;">/100</div>
-          </div>
-          <div>
-            <div style="font-size:18px; font-weight:700; color:${scoreColor};">${scoreLabel}</div>
-            <div style="font-size:13px; color:var(--muted);">NutriIQ score</div>
-            <div style="font-size:11px; color:var(--muted); margin-top:4px; font-family:'Space Mono',monospace;">Source: Open Food Facts</div>
-          </div>
-        </div>
+  // Render the full report
+  showResults(syntheticResult, null, false);
 
-        <!-- Macros grid -->
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:1rem;">
-          ${[
-            ['Protein', protein.toFixed(1)+'g', 'per 100g'],
-            ['Sugar', sugar.toFixed(1)+'g', 'per 100g'],
-            ['Calories', Math.round(calories)+' kcal', 'per 100g'],
-            ['Fibre', fibre.toFixed(1)+'g', 'per 100g'],
-          ].map(([label, val, sub]) => `
-            <div style="background:var(--surface2); border-radius:10px; padding:0.75rem;">
-              <div style="font-size:11px; color:var(--muted); font-family:'Space Mono',monospace; margin-bottom:2px;">${label}</div>
-              <div style="font-size:18px; font-weight:700; color:var(--text);">${val}</div>
-              <div style="font-size:10px; color:var(--muted);">${sub}</div>
-            </div>`).join('')}
-        </div>
-
-        <!-- Badges -->
-        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:1rem;">
-          <span style="padding:5px 12px; border-radius:20px; font-size:12px; font-weight:700; background:${hasAdditives ? 'var(--red-light)' : 'var(--green-light)'}; color:${hasAdditives ? 'var(--red)' : 'var(--green)'};">
-            ${hasAdditives ? '⚠️ '+additivesTags.length+' additive'+(additivesTags.length>1?'s':'') : '✅ No additives detected'}
-          </span>
-          <span style="padding:5px 12px; border-radius:20px; font-size:12px; font-weight:700; background:var(--surface2); color:var(--muted);">
-            💪 ${proteinPer100kcal.toFixed(1)}g protein/100kcal
-          </span>
-        </div>
-
-        ${phabGap > 0 ? `
-        <div style="background:var(--phab-light); border:1.5px solid var(--phab); border-radius:10px; padding:0.75rem 1rem; font-size:13px; color:var(--text); margin-bottom:1rem;">
-          Phab bar scores <strong style="color:var(--phab);">+${phabGap} pts higher</strong> on NutriIQ.
-          <a href="https://www.getphab.com/collections/protein-bar" target="_blank" rel="noopener" style="color:var(--phab); font-weight:700; margin-left:4px; text-decoration:none;">Try Phab →</a>
-        </div>` : `
-        <div style="background:var(--green-light); border-radius:10px; padding:0.75rem 1rem; font-size:13px; color:var(--green); margin-bottom:1rem;">
-          🏆 This product scores at or above Phab's NutriIQ benchmark!
-        </div>`}
-
-        <button onclick="setScanMode('single')" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; background:transparent; font-family:inherit; font-size:13px; color:var(--muted); cursor:pointer;">📸 Scan nutrition label for a deeper analysis</button>
-      </div>
-    </div>`;
+  // Persist to Supabase feed in background
+  persistBarcodeScan(syntheticResult).catch(() => {});
 
   resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function persistBarcodeScan(result) {
+  try {
+    await fetch('/api/persist', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        product_name: result.product_name,
+        nutri_iq_score: result.nutri_iq_score,
+        protein_per_100kcal: result.protein_per_100kcal,
+        sugar_per_100g: result.per_100g.sugar_g,
+        calories_per_100g: result.per_100g.calories,
+        fibre_per_100g: result.per_100g.fibre_g,
+        has_artificial_additives: result.has_artificial_additives,
+        ingredients_count: result.ingredients_count,
+        image_url: result._image_url || null,
+        source: 'barcode'
+      })
+    });
+    updateScanCount();
+  } catch (_) {}
 }
 
 // ===================== SCROLL TO SCANNER =====================
