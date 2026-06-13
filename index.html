@@ -3813,25 +3813,37 @@ async function startBarcodeCamera() {
   wrap.style.display = 'block';
   startBtn.style.display = 'none';
 
-  // Try native BarcodeDetector first (Chrome Android), fall back to ZXing (iOS/Safari/desktop)
+  // Always request camera permission explicitly first (required on iOS Safari)
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }
+    });
+  } catch (e) {
+    stopBarcodeCamera();
+    showToast('⚠️ Camera access denied. Allow camera in Settings, or use manual entry below.');
+    return;
+  }
+
+  // Try native BarcodeDetector (Chrome Android — fastest)
   if ('BarcodeDetector' in window) {
     try {
-      barcodeCameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 } } });
-      video.srcObject = barcodeCameraStream;
+      barcodeCameraStream = stream;
+      video.srcObject = stream;
       barcodeDetector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code'] });
       scanBarcodeFrame();
       return;
     } catch (e) {}
   }
 
-  // ZXing fallback — works on iPhone/Safari/desktop
+  // ZXing fallback (iOS Safari, desktop)
   if (window.ZXing) {
     try {
+      barcodeCameraStream = stream;
+      video.srcObject = stream;
+      video.play();
       zxingReader = new ZXing.BrowserMultiFormatReader();
-      const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
-      const backCamera = devices.find(d => /back|rear|environment/i.test(d.label)) || devices[devices.length - 1];
-      const deviceId = backCamera ? backCamera.deviceId : undefined;
-      await zxingReader.decodeFromVideoDevice(deviceId, 'barcode-video', (result, err) => {
+      zxingReader.decodeFromStream(stream, video, (result, err) => {
         if (result) {
           const code = result.getText();
           stopBarcodeCamera();
@@ -3841,13 +3853,13 @@ async function startBarcodeCamera() {
       return;
     } catch (e) {
       stopBarcodeCamera();
-      showToast('⚠️ Camera access denied. Use manual entry below.');
+      showToast('⚠️ Could not start barcode reader. Use manual entry below.');
       return;
     }
   }
 
   stopBarcodeCamera();
-  showToast('⚠️ Could not start camera. Use manual entry below.');
+  showToast('⚠️ Barcode scanner not supported. Use manual entry below.');
 }
 
 function stopBarcodeCamera() {
